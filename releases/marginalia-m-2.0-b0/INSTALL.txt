@@ -1,0 +1,180 @@
+How to Install Marginalia for Moodle
+
+Find the correct section below depending on whether you are installing 
+Marginalia for the first time or upgrading to a new version of Marginalia.
+
+If you upgrade to a new version of Moodle, upgrade Moodle first then follow the 
+instructions for a fresh Marginalia install.
+
+
+HOW TO INSTALL MARGINALIA THE FIRST TIME
+
+These instructions apply if you do not already have Marginalia installed.  If
+you're already running an older Marginalia release, skip to the next section
+(HOW TO UPGRADE AN EXISTING MARGINALIA INSTALLATION).
+
+The installation requires Moodle 2.0 or later.  An older release of Marginalia
+does exist for Moodle 1.9.  It lacks some features an refinements introduced
+since then.
+
+Install Moodle *before* installing Marginalia.  If you patch Moodle before
+running the Moodle installer, your Moodle istall may not run correctly.
+
+The installation entails patching the Moodle code and running the Marginalia
+installer within Moodle.  Note that the following instructiors are for UNIX-type
+systems (e.g. Linux, Mac OS X).  I do not have instructions for installing on
+Windows.
+
+I recommend making a backup of your entire Moodle directory tree before 
+performing the install.
+
+
+STEP 0: Log-In To Moodle
+
+Log into Moodle at least once to make sure it is working and let it do any
+initial set-up it needs to.  Once you see the Moodle home page you should be
+set.
+
+
+STEP 1: Patch Moodle
+
+The patch file will update existing files in your Moodle installation.  You
+should do this from a clean Moodle install.  If you previously had an older
+version of Marginalia installed, you will need to restore the Moodle files to 
+their unpatched state before going ahead.  To apply the patch, copy moodle.patch
+into your moodle root directory and run the following command:
+
+    patch -b -p 1 <moodle2.patch
+    
+The digit after the -p is the number, not the letter L.  The -b option is not 
+strictly necessary, but it makes it easier to (manually) uninstall Marginalia by 
+keeping copies of unpatched files.
+
+You should not see any errors.  However, the official release of Moodle is 
+constantly changing, so there is a possibility that this patch will not match 
+your Moodle version.  This does not happen very often, but if it does you may 
+need to modify the source files by hand.
+
+(This assumes you have the GNU patch utility.  You probably do:  Linux and OS X 
+come with it, but a few UNIX systems use a non-GNU patch command.  GNU patch is 
+free software and shouldn't be hard to find or set up.)
+
+
+STEP 2: Copy Marginalia Files
+
+Most of Marginalia is implemented as a kind of Moodle extension called a
+"block."  You need to copy the block into the blocks directory of your Moodle
+installation.  There are also other files that are needed for Marginalia to
+function correctly (at this moment, there's just one - permalink.php).  Copy the 
+contents of the moodle directory in the Marginalia release to the correct
+locations under the root of your Moodle installation.  
+
+When you're done, most of marginalia will be in blocks/marginalia under your
+Moodle root.
+
+Make sure to copy in mod/forum/permalink.php;  otherwise, links from the summary 
+page back to individual forum posts will not work.
+ 
+  
+STEP 3:  Install the Database
+
+Log in to Moodle as an administrator and visit the Notifications link in the 
+Site Administration sidebar.  Moodle will then automatically create the 
+necessary database tables for Marginalia
+
+
+STEP 4:  Keep Copies of Marginalia and Moodle
+
+Keep copies of the versions of Marginalia and Moodle you download.  If you 
+upgrade to a new version of Moodle, you will need to install Marginalia again.  
+If you upgrade to a new version of Marginalia, you may need your Moodle install 
+files again.  You could always download new copies off the web, but using 
+versions you know work could save you pain and suffering - or at least help you 
+narrow down problems.
+
+
+HOW TO UPGRADE AN EXISTING MARGINALIA INSTALLATION
+
+These instructions are for upgrading from a previous version of Marginalia.
+If you are upgrading your Moodle version, please see those instructions above.
+
+Depending on which version you are upgrading from and to, the upgrade process
+will be different.  Regardless, I recommend backing up your database and Moodle
+directory just in case something goes wrong.
+
+For must upgrades all you need to do is replace the blocks/marginalia directory 
+with the new version and visit the Notifications link in the Site Administration 
+sidebar within Moodle to update the database.
+
+Sometimes, an upgrade may require you to patch Moodle again.  In that case, you
+need to start with unpatched Moodle files (you can't apply a Marginalia
+patch on top of an existing Marginalia patch).
+
+To figure out the correct process, consult the following list.  If your current
+Marginalia version is older than one of the versions on the list, and the
+version you are upgrading to is on the list or is later than one of the versions
+on the list, then you will need to install on a fresh copy of Moodle:
+
+    April 2011
+
+    
+SPECIAL CASE: Pre-2009 Releases
+
+If you are running a version of Marginalia from before December 2008 the process
+is more involved.  You can tell that you have a pre-December 2008 release 
+because Marginalia is not present in blocks/marginalia - instead it is in an
+"annotation" directory under your Moodle root.  If you such an old version, it 
+is essential you follow these steps before using marginalia or you may mangle 
+your data.  After creating the database, as described above (by clicking on 
+Notifications), you must log into MySQL and execute the following command:
+
+    update mdl_block set version=2008101800 where name='marginalia';
+
+Then, go back to Moodle and click on the Notifications link a second time.  
+Marginalia should convert your existing annotations so that they
+will work with the new software.  (As of December 2008, Marginalia uses a new
+table in the database so your old annotation table will not be touched.  In a
+pinch, you should be able to revert to an older Marginalia release without
+having to restore the database.)
+
+
+TEST MARGINILIA
+
+You should now be able to connect to your Moodle web server as usual.  You 
+should see an annotation margin if you visit a forum with posts while logged in.  
+Select some text and in margin on the right to create annotations.  Reload the 
+page:  your annotations should still be there.
+
+
+INSTALLATION PROBLEMS
+
+If you have problems (common symptoms are that you can create annotations but 
+they disappear when you reload the page, or you can only create one annotation - 
+subsequent attempts fail), it is probably because of a misconfiguration.  First, 
+make sure that the URL through which you are accessing Moodle matches the one in 
+config.php in your Moodle root directory.  If you are using a different 
+url (e.g. localhost instead of a numerical IP address), annotation will not
+work.
+
+If your URL matches your configuration, I recommend installing and running 
+the Firebug extension for Firefox.  Among other things, it tracks AJAX requests 
+from a web page to the server.  The first thing to look for (other than any 
+explicit errors reported by Firebug) is the GET requests sent to 
+blocks/marginalia/annotate.php.  Looking at the server response often immediately 
+reveals the problem (assuming PHP error reporting is on - something you must
+enable in Moodle).
+
+If you run into problems, please let me know.  I don't have the resources to
+test on many configurations, so you're probably not the only one.  I can't fix
+what I don't know about.  My email address is geof geof net.  You can guess
+the punctuation.
+
+
+UNINSTALLING MARGINALIA
+
+There is currently no automatic mechanism for uninstalling Marginalia.  The best
+solution is to use a fresh Moodle install (it's always a good practice to keep a
+copy of the version of Moodle you download).  In a pinch, the -b option to the
+patch command you ran when you installed Marginalia creates files ending in 
+.orig:  replacing patched files with these and removing the blocks/marginalia 
+directory should disable Marginalia.

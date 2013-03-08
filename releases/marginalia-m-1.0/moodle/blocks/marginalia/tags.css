@@ -1,0 +1,24 @@
+ul#keywords {
+	list-style-type: none;
+	margin: 1em 2em;
+	padding: 0;
+}
+
+ul#keywords li {
+	display: inline;
+	margin: 0;
+	padding: 0;
+}
+
+ul#keywords li + li:before {
+	content: ', ';
+}
+
+fieldset {
+	margin: 3em 0;
+	padding: 1em 1.5ex;
+}
+
+#replace-count-prompt {
+	display: none;
+}

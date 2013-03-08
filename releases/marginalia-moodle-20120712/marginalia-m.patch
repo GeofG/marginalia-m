@@ -1,0 +1,120 @@
+Only in moodle: blocks
+diff -Bbur -x .svn -x .DS_Store moodle.orig/mod/forum/discuss.php moodle/mod/forum/discuss.php
+--- moodle.orig/mod/forum/discuss.php	2012-06-20 22:59:45.000000000 -0700
++++ moodle/mod/forum/discuss.php	2012-06-20 22:58:03.000000000 -0700
+@@ -117,6 +117,14 @@
+         redirect($return.'&moved=-1&sesskey='.sesskey());
+     }
+ 
++    // #marginalia begin
++    $moodlemia = moodle_marginalia::get_instance( );
++    $miaprofile = $moodlemia->get_profile( $PAGE->url->out(false) );
++    if ($miaprofile) {
++        $miaprofile->emit_requires( $moodlemia );
++    }
++    // #marginalia end
++
+     add_to_log($course->id, 'forum', 'view discussion', "discuss.php?d=$discussion->id", $discussion->id, $cm->id);
+ 
+     unset($SESSION->fromdiscussion);
+@@ -255,6 +263,16 @@
+         }
+         echo "</div>";
+     }
++    
++    // #marginalia begin
++    // *not* putting JS last, even though that might speed up page load:
++    // more important to minimize patch footprint
++    if ($miaprofile) {
++        $miaprofile->emit_body( $moodlemia );
++        $miaprofile->emit_margin_controls( $moodlemia );
++    }
++    // #marginalia end
++    
+     echo '<div class="clearfloat">&nbsp;</div>';
+     echo "</div>";
+ 
+diff -Bbur -x .svn -x .DS_Store moodle.orig/mod/forum/lib.php moodle/mod/forum/lib.php
+--- moodle.orig/mod/forum/lib.php	2012-06-20 22:59:54.000000000 -0700
++++ moodle/mod/forum/lib.php	2012-07-10 18:41:20.963764652 -0700
+@@ -28,6 +28,13 @@
+ require_once($CFG->libdir.'/eventslib.php');
+ require_once($CFG->dirroot.'/user/selector/lib.php');
+ 
++// #marginalia begin
++// including this here ensures it is also included for discuss.php
++// and post.php without having to patch them also
++require_once( $CFG->dirroot.'/blocks/marginalia/config.php' );
++require_once( ANNOTATION_DIR.'/lib.php' );
++// #marginalia end
++
+ /// CONSTANTS ///////////////////////////////////////////////////////////
+ 
+ define('FORUM_MODE_FLATOLDEST', 1);
+@@ -3409,6 +3416,17 @@
+         }
+         $postcontent .= html_writer::tag('div', $attachedimages, array('class'=>'attachedimages'));
+     }
++
++    // #marginalia begin
++    // Write out the margin.  It goes before the content, then floats right.
++    global $PAGE;
++    $miamoodle = moodle_marginalia::get_instance( );
++    $miaprofile = $miamoodle->get_profile( $PAGE->url->out( false ) );
++    if ($miaprofile) {
++        $output .= $miaprofile->output_margin( );
++    }
++    // #marginalia end
++
+     // Output the post content
+     $output .= html_writer::tag('div', $postcontent, array('class'=>'posting '.$postclass));
+     $output .= html_writer::end_tag('div'); // Content
+@@ -3433,6 +3451,13 @@
+             $commandhtml[] = $command;
+         }
+     }
++    // #marginalia begin
++    // Ack.  Moodle assumes that commands should be links.  This doesn't work
++    // for the quote button, because it has to call some JS to get the quote.
++    if ($miaprofile) {
++        $commandhtml[] = $miaprofile->output_quote_button( $reply );
++    }
++    // #marginalia end
+     $output .= html_writer::tag('div', implode(' | ', $commandhtml), array('class'=>'commands'));
+ 
+     // Output link to post if required
+Only in moodle/mod/forum: permalink.php
+diff -Bbur -x .svn -x .DS_Store moodle.orig/mod/forum/post.php moodle/mod/forum/post.php
+--- moodle.orig/mod/forum/post.php	2012-06-20 22:59:49.000000000 -0700
++++ moodle/mod/forum/post.php	2012-06-20 22:58:12.000000000 -0700
+@@ -834,6 +834,14 @@
+ $PAGE->set_title("$course->shortname: $strdiscussionname ".format_string($toppost->subject));
+ $PAGE->set_heading($course->fullname);
+ 
++// #marginalia begin
++$moodlemia = moodle_marginalia::get_instance( );
++$miaprofile = $moodlemia->get_profile( $PAGE->url->out( false ) );
++if ($miaprofile) {
++    $miaprofile->emit_requires( $moodlemia );
++}
++// #marginalia end
++
+ echo $OUTPUT->header();
+ 
+ // checkup
+@@ -858,6 +866,15 @@
+         print_error('notpartofdiscussion', 'forum');
+     }
+ 
++    // #marginalia begin
++    $moodlemia = moodle_marginalia::get_instance( );
++    $miaprofile = $moodlemia->get_profile( $PAGE->url->out( false ) );
++    if ($miaprofile) {
++        $miaprofile->emit_body( );
++        $miaprofile->emit_margin_controls( );
++    }
++    // #marginalia end
++
+     forum_print_post($parent, $discussion, $forum, $cm, $course, false, false, false);
+     if (empty($post->edit)) {
+         if ($forum->type != 'qanda' || forum_user_can_see_discussion($forum, $discussion, $modcontext)) {

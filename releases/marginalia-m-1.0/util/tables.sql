@@ -1,0 +1,28 @@
+create table mdl_annotation (
+	id int primary key auto_increment,
+	userid int not null,
+	access_perms int,
+	url varchar(255) not null,
+	start_block varchar(255),
+	start_xpath varchar(255),
+	start_line int,
+	start_word int,
+	start_char int,
+	end_block varchar(255),
+	end_xpath varchar(255),
+	end_line int,
+	end_word int,
+	end_char int,
+	note varchar(255) null,
+	quote text null,
+	quote_title varchar(255) null,
+	quote_author_id int,
+	action varchar(30) null,
+	link varchar(255) null,
+	link_title varchar(255) null,
+	created int,	
+	modified int,
+	object_type int,
+	object_id int null
+);
+

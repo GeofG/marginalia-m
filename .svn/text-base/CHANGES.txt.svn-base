@@ -1,0 +1,403 @@
+Marginalia Change Log
+
+This change log includes changes to the stand-alone version of Marginalia and 
+to the Moodle annotation implementation.  The combined format simplifies my job 
+of keeping the log up-to-date, and reduces the change for error.  Note that most 
+bug fixes etc. from the stand-alone version apply to the subsequent Moodle 
+version release;  similarly, some fixes to the stand-alone version first appear 
+in a Moodle release.  Keep in mind that often the Moodle release is the most
+up-to-date version of the Marginalia library.
+
+
+2011-05 (Moodle)
+  This is a major release, focusing on three areas:  Moodle 2.0 integration,
+  a minimized patch footprint, and a streamlined user interface.  It was
+  delayed chiefly because of a lack of resources for testing (on different
+  browsers and for upgrades from previous versions).
+  
+  * This release works with and requires Moodle 2.  I will no longer be adding
+    features for Moodle 1.9.
+  * The patch footprint is dramatically smaller.  It doesn't touch anything
+    outside mod/forum.
+  * The create annotation button in the margin has been eliminated.  Clicking
+    on a blank space in the margin performs the create annotation function now.
+  * The public/private button has been replaced by a drop-down sheet menu at
+    the top of the page.  This makes many things possible in the future.  It
+    also establishes the principle that if you and I are looking at the same
+    sheet (public or private or any future one) our screens should look almost
+    exactly the same and we should both have the same sense of how much space
+    remains for margin notes.
+  * That menu also includes the summary link and help link to minimize screen
+    real-estate needed and clarify the relatioship of those controls.
+  * Annotation controls are only displayed when the mouse hovers over the note.
+  * A character count-down to tell the user how much space is left when typing
+    a margin note.  Short note errors were a major user complaint.
+  * Annotation is enabled on the page for creating a reply to an existing post.
+  * URLs in margin notes are automatically turned into hyperlinks.  For
+    security reasons, this only happens if they use the http or https protocols
+    and the domain is displayed as the link text so users know whether it looks
+    suspicious (Slashdot's approach).
+  * Proper use of usernames everywhere as per Moodle configuration.
+  * The Atom feed is gone - it's not much use if it only shows public
+    annotations.
+  * The tags page is gone.  It was pretty much vistigial anyway, though that
+    means no more search and replace.
+  * New annotations are marked with a red star so users can find recent
+    comments.
+  * Improved integration with Moodle's database code, security model, etc.
+  * Full localization support for strings used by the Javascript front-end.
+    Still no other languages though.  Add languages to blocks/marginalia/lang
+    as per the Moodle standard.
+  * Change indication of association between margin note and highlight to be
+    clearer for color-blind users.
+  * Marginalia no longer requires changes to annotated HTML:  instead it is
+    configurable with CSS selectors to extract the appropriate elements and
+    data without modification.  This further shrinks the patch footprint.
+  * Much code cleanup for the annotation summary.  This should make any future
+    support for other Moodle modules easier.
+  * In the past, Marginalia would easily lose highlight locations if the
+    underlying annotated text changed.  This version silently attempts to fix
+    the problem in simple cases.  If the current user is appropriately trusted
+    it updates the database accordingly.  This hits the majority of simple
+    cases.  A much more complex approach is needed for a comprehensive solution.
+  * Marginalia is now capable of "popping-in" annotations by other users in 
+    real-time without reloading the page.  This capability may burden the server
+    so is not enabled for Moodle.
+    
+2009-10-09b
+  Security fix.
+  
+2009-10-09
+  Bug fixes.
+
+2009-01-07
+  This version fixes a significant security vulnerability.
+
+2008-12-22 (OJS and demo)
+  * IE compatibility for OJS.
+  * Bug fixes and performance improvements for OJS.
+  * Fixed modified and created dates for OJS.
+  * CSRF protection for OJS.
+  * IE fixes for the demo.
+
+2008-12-21 (demo)
+  The non-static demo only works with userids, not usernames.  When annotations 
+  created by other users were displayed, the username was blank.  Now the 
+  username is set equal to the userid.  In a working application, the username 
+  should be a proper human-readable name (contrasted with the userid, which must 
+  be unique - usually it's the login name).
+
+2008-12-15 (Moodle)
+  This release is aimed at stabilizing and refining the Moodle version, though 
+  consideration is being given to the other versions also.  So far there have 
+  been releases of the Moodle version (2008-12-14 and later) and demo 
+  (2008-12-20 and later).  The following changes are in the Marginalia core 
+  libraries and apply to all subsequent releases for all platforms (Moodle, OJS, 
+  demo):
+
+  * IE (version 7) is again supported.  Safari is also now fully supported 
+    (thanks to browser improvements by Apple).
+  * I found a serious problem that could cause margin notes to be wrongly 
+    ordered on pages containing HTML br elements.  Typically, notes would 
+    cluster towards the bottom of the margin, not near their highlights.  The 
+    fix requires a change in the database.  Fixes to data can only happen when a 
+    user logs in and views his or her annotations.  Pages displaying annotations 
+    by multiple users may exhibit this kind of incorrect behavior (even when 
+    they didn't before) until all users have viewed their annotations on the 
+    page.  This will fix annotations already experiencing the problem *so long 
+    as you visit the page in a non-IE browser* (this is due to IE's lack of 
+    XPath support).
+  * Marginalia previously assumed well-formed HTML, i.e. HTML in which block 
+    elements are never nested within inline elements.  Marginalia no longer 
+    makes this assumption, although in some cases it might be quite slow on 
+    malformed pages.
+  * Protection against a form of cross-site request forgery attack that could in 
+    theory be used to modify or delete a user's existing annotations.  This is 
+    implemented for Moodle (if cookies are used for the session ID, which is the 
+    default) and OJS.  Previously the benefits of such an attack would be 
+    limited;  to my knowledge there was and is no way to inject database 
+    commands or HTML through Marginalia.
+
+  The following changes are Moodle-specific:</p>
+  * Marginalia is, to the extent possible, a proper Moodle plug-in.  This makes 
+    it much easier to install:  Moodle will automatically create Marginalia's 
+    database tables, and there are fewer files to place in odd places.  This 
+    should also make future upgrades much simpler.
+  * Smartcopy is gone.  It was a Firefox-specific hack that was not discoverable 
+    and seemed to seldom be used.  Instead, we now have Smartquotes.  A "quote" 
+    button beneath each forum message allows you to select and quote message 
+    content into a reply.  This will start a reply if necessary, or paste into a 
+    reply in another window.
+  * Annotations can also be quoted.  If you wish to reply to someone else's 
+    annotation, click the quote button.  Or, you can effectively turn one of 
+    your own annotations into a forum post.  We found that users tried to 
+    conduct discussions within the annotation margin.  This is intended to 
+    redirect discussion back to the medium best suited for it - the forum 
+    itself.
+  * Tags (keywords) have been replaced with a system to make it easy to type 
+    frequently used margin notes.  If a note has been used more than once, 
+    Marginalia can autocomplete it when you start typing.  This eliminates the 
+    +/- control next to each annotation, and eliminates the need to create tags 
+    on the Tags page.
+  * The summary page search interface has been simplified.  The drop-down menus 
+    for specifying search criteria are gone.  Instead, you can click a pop-up 
+    icon next to the name of a user in the summary results in order to filter 
+    by that user.  You can do the same for tags (notes used more than once).  In 
+    order to remove filters from the search, click on links in the text 
+    description of the search at the top of the page.  Clicking here can also 
+    specify that the search should find exact matches of the search string 
+    (useful for keywords).
+  * All users' existing (public) annotations on a forum page can be fixed 
+    automatically when an administrator views them.  This can prevent the 
+    display problem mentioned above.  This feature allows admin users to make 
+    changes to highlight range locations for other users, so it can be switched 
+    off for increased security.
+  * The height of the button in the margin is set correctly, including when 
+    annotations are added, deleted, etc.
+  * The database schema has been redesigned to be smaller and faster (using 
+    Moodle id values instead of the strings used in Marginalia's client/server 
+    protocol).
+  * The Moodle-specific code is being shifted towards Moodle's coding standards.
+  
+2007-11-05 (Moodle)
+  * Per-user tag feature ("keywords"), accessible from Summary page
+  * Note search and replace feature on tag edit page
+  * Summary of annotations at forum level (in addition to discussion and course 
+    levels)
+  * Cross-site request forgery protection for annotations (but not for 
+    preferences or keywords)
+
+2007-08-06 (Moodle)
+  The Moodle version has long been out of synch with the Marginalia code base.
+  This is the first version to incorporate changes for OJS and Bungeni.  From 
+  Moodle's point of view, most of these changes are internal and don't affect 
+  the behavior of the application.
+
+  * Integration with Moodle 1.8 codebase.
+  * Numerous refactorings and optimizations, including a new optimized database 
+    format for ranges.  The Moodle version requires changes to the database, but 
+    is backward-compatible with existing annotations in the old format (though 
+    they will be slower).
+  * Added online help for annotation.
+  * New Atom format is easier to read when subscribed to.
+  * Moved summary page link from individual annotation margins to top of forum page.
+  * Reduced patches to Moodle to make Marginalia support easier to maintain in future.
+
+2006-6-08 (Moodle)
+  * Remember the user whose annotations are displayed, rather than always 
+    resetting to the current user.
+  * Smartcopy can now be toggled by pressing Shift-Ctrl-S
+  * Guest users are not permitted to annotate
+  * An assortment of small fixes (especially for IE)
+  * Add Smartcopy instructions to summary page;  minor display changes
+
+2006-05-12 (demo)
+  * Firefox and IE were handling nonbreaking spaces differently.  This has been
+    remedied.  Both browsers now treat nbsp as a space character.  In addition, 
+    both browsers would reduce multiple whitespace characters in annotated 
+    content to a single space.  They no longer do this (although both browsers 
+    have some odd built-in behavior in this regard).
+  * IE could not handle an annotation highlight region beginning at the very
+    start of a post.  This is fixed.
+  * Updated to the current hAtom specification.  This may break existing 
+    applications as class names have changed, and the link to an individual post 
+    on a page is now found using rel="bookmark" rather than the class attribute.
+
+2006-02-24 (Moodle)
+  * Integrated with the Moodle 1.6 code base (version as of today).  I don't 
+    plan to continue supporting Moodle 1.5.x.
+  * Fixed the Atom link on the summary page.
+  * Adopt current hAtom specification (http://microformats.org/wiki/hatom)
+
+2006-02-06 (Moodle, demo)
+  * Renamed the software to Marginalia;  this should make it easier to reference
+    and potentially also easier to find with web searches.
+
+2006-01-15 (Moodle)
+  * Update documentation files, which were slightly out-of-date
+  * New columns were missing from tables.sql (though not from create-db.php)
+
+2006-01-07 (Moodle)
+  * Allow users to view others' annotations on forum pages, including
+    margin notes and highlighting.
+  * Add ability to view a summary of all annotations for a course.
+  * Complete (I hope) localization for summary page.
+  * Speed up calculations used when annotation highlights are shown.
+  * Store Moodle object IDs in database, thereby speeding up queries (I was 
+    concerned about scalability with large numbers of annotations and LIKE 
+    queries on the database).  <strong>Note:</strong> this requires that the 
+    object_id and object_type columns columns be added to any existing database.  
+    See create-db.php for details.
+  * Remove buttons for teacher, author annotations, reverting to public/private 
+    access 
+
+2005-09-12 (Moodle, demo)
+  * The fix for forum ratings had introduced an IE bug.  This is resolved.
+  * The size of the delete and sharing buttons are fixed, so that they won't be
+    too small for pages and Moodle themes with small default font sizes.
+
+2005-08-25 (Moodle)
+  Note that the database has changed a bit, although by default the new column 
+  isn't required.  Logging settings are at the top of annotation/config.js and 
+  annotation/lib.php.
+
+  * Sharing buttons on the summary page.
+  * Moodle logging
+  * Eric Schewe's uninstall script.
+  * Option to include user names in annotation-related URLs so they will be in 
+    the Apache log.
+  * Option to mark deleted annotations instead of deleting them (useful for 
+    logging;  requires new database column)
+
+2005-08-24 (demo)
+  This fixes a relatively rare bug which can cause Firefox trouble with certain 
+  kinds of selection ranges.  The bug causes text selections to vanish is soon 
+  as they are made; if they don't vanish, creating annotations from them fails.
+
+2005-08-23 (Moodle)
+  * Moodle URLs are stored in the database with the configuration-dependent part 
+    stripped.  This means there is no need to update the database if the site 
+    URL changes.
+  * The summary page wasn't filtering displaying shared/private annotations 
+    correctly: other users' annotations were always shown, even when "my 
+    annotations" was selected.  Note to the curious:  although the interface 
+    doesn't allow it, it is possible to view more specific lists of annotations 
+    by editing the summary page URL (e.g. you can see only your own private 
+    annotations, or the shared annotations of a specific user).
+
+2005-08-20 (Moodle)
+  There was an incompatibility between forum ratings and annotation which is
+  resolved in this release.
+
+2005-08-19 (Moodle)
+  This release fixed a bug in the install procedure and a left-over dependency 
+  on mod_rewrite</kbd>.
+
+2005-08-16 (Moodle)
+  This release focused on the quality of the summary page code:
+
+  * Refactor the summary page to make it easy to add support for other Moodle 
+    modules.
+  * Reintroduce Atom support, this time properly integrated with summary search.
+    I don't think this will actually work for anyone, however, since the feed 
+    reader would need to be logged in to Moodle.
+  * Fix authentication bugs for annotation update and delete (the operations 
+    would fail, but spit out bad PHP error messages instead of failing nicely).
+  * Hard-code the margin color.  I haven't yet worked out to integrate with 
+    Moodle's theme system, and in some cases it was coming out bright green.
+
+2005-08-16 (demo)
+  * The Apache mod_rewrite dependency is now optional.  This should make it 
+    easier for developers to install the code in different environments.  As 
+    important as I believe nice URLs are, the feature was creating too much 
+    complication for test installations.
+
+2005-08-08 (Moodle)
+  This release was primarily about integrating the latest stand-alone version
+  with Moodle, but it also included a number of important Moodle bug fixes and 
+  some major features also.
+
+  * Add search capability to the summary page, including the ability to search
+    public annotations created by other users.
+  * Create a permalink URL for each message that is not dependent on the forum
+    ID.  The permalink.php file redirects any request for that message to the 
+    correct forum page.  This means that smartcopy links and annotations will 
+    not break when a post is moved to a different forum (e.g. with the Split 
+    admin function).
+  * Always display annotations in the summary, even if the associated post has
+    been deleted.  Annotations belong to their creator, not the author of the 
+    annotated resource.
+  * Make the create annotation button light up in yellow - the same color as the
+    highlights - when the mouse is over it.  Doesn't work in IE.
+  * Fix the height of the create annotation button in IE.
+  * Remove the name of the author of the annotated resource from the summary 
+    page (it was too cluttered).
+  * Remove the RSS/Atom link from the summary page (its role was ambiguous and 
+    the content of the feed did not match the search criteria for the page).
+  * Delete a user's annotation when the user is deleted;  update annotations
+    appropriately when a username changes.
+  * Generalize the summary page implementation, so that it's easy to support 
+    summaries if annotation support is added elsewhere in Moodle.
+
+2005-08-08 (Moodle, demo)
+  This release focused on bug fixes and edge cases:
+
+  * Optimize word counting.  Subjectively, I would say this produced about a
+    3-5x speedup for annotation creation and display.
+  * When displaying annotations, detect changes to the document.  If the 
+    annotation highlight no longer refers to the correct piece of text, don't 
+    display the highlight or note and provide a visual indication that there's a 
+    problem.  In Moodle, this links to a summary page showing the problem 
+    annotations.  This isn't visible on IE.
+  * Fix a problem that sometimes caused notes to line up incorrectly with the
+    corresponding highlight region.
+  * Use microformat-style abbr title for smartcopy dates.
+  * Limit note and quote lengths to 250 and 1000 words respectively.
+  * Deal correctly with cases in which users create post content containing 
+    class names used by the application.  It should be impossible for a user to 
+    confuse the annotation code by using specific HTML tags and class values.
+  * Now that Atom is done, discard RSS 2 support.
+  * Fix Enter to save annotations on IE.
+
+2005-07-28 (demo)
+  This release involved important bug fixes and lots of new code, but had little 
+  impact on the interface:
+
+  * Internet Explorer and Firefox modify whitespace in HTML files.  This led to 
+    a difference in how they measured offsets, so that highlights created in one 
+    could be misplaced in the other.  I replaced character offsets with 
+    word+character offsets.  This affects the database, the protocol, and the 
+    internal implementation.  As a result, highlights drop leading and trailing 
+    whitespace.  This release is noticably slower due to the extra calculation 
+    involved (this may be optimized in future versions).
+  * Highlight em tags were being inserted around all text nodes within a 
+    highlighted range.  This was incorrect:  some HTML elements, such as tr and 
+    ul do not allow em as a child element.  The application now checks against 
+    the content model for parent elements so that em tags are placed 
+    appropriately.
+  * Creating annotations sometimes caused the browser to scroll away from the 
+    area where the new annotation was created, which was very confusing.  The 
+    application now prevents this by saving and restoring the browser scroll 
+    position.
+
+2005-07-19 (demo)
+  Since the 2005-06-21 release, I have made a number of changes.  The main new 
+  features are:
+
+  * Full support for Internet Explorer.  This includes code to extract the 
+    location of user-selected text in the document.  Unfortunately, IE crashes 
+    from time to time while creating, updating, and deleting annotations.  The 
+    code for determining the location of the selection is in see 
+    getSelectionRangeIE() in domutil.js;  I don't believe it's involved in the 
+    crashes if you want to use it for something else.
+  * Much refactoring to reduce the use of Javascript closures and clear links 
+    between DOM and Javascript objects.  This is to prevent IE from leaking 
+    memory, and may have improved (though not solved) the crash situation.  Part 
+    of this involved reducing thescope of changes to the document when 
+    annotations are modified (e.g., when  an annotation is deleted other 
+    annotations are not redrawn).  This clean-up is ongoing.
+  * Smart Copy for Firefox.  Ordinary copy-paste operations using the mouse 
+    include additional information about the source of the copied text.
+  * Partial support for annotations by multiple users.  A small icon next to the 
+    x button (which deletes an annotation) can be toggled between public and 
+    private states.  However, this has no other effect in the stand-alone 
+    implementation, but the Moodle version uses it to provide the ability to 
+    search and view annotations by other users.
+  * The ability to view annotations in Safari.  Safari does not provide a way to 
+    discover the location of a text selection, so it is not possible to create 
+    annotations.
+  * A shift to the Atom 1.0 namespace for the annotation XML protocol.
+  * Overlapping highlights indicate the overlap by a darker background color 
+    (it's just a CSS trick, but I think it's cool).
+  * More consistent field, parameter, and database column names.
+
+2005-07-20 (demo)
+  * I believe I've fixed the crash on Internet Explorer.  The problem was the 
+    normalize function in IE's DOM, which is buggy and sometimes crashes the 
+    browser.  Now, the application simply doesn't call that function on IE.  The 
+    result should be that the text on the page becomes increasingly fragmented, 
+    which should eventually slow down the application.  If IE is buggy enough, 
+    it might crash it.  I need to write my own version of normalize for Exploder
+  * Better compliance with the Atom 1.0 specification, though not yet to the 
+    point where it validates.
+

@@ -1,0 +1,45 @@
+
+
+
+-- Marginalia Credits --
+
+
+I (Geof Glass) wrote nearly all of the code for this project, although obviously not for the excellent systems (Moodle, OJS, and Bungeni) with which it works.
+
+I want to particularly thank BC Campus for funding this effort, and for allowing its release under the GNU General Public License, and to Simon Fraser University through Dr. Andrew Feenberg's Applied Communication and Technology Lab in the School of Communication and through the Learning and Instructional Development Centre for their financial support. Malaspina University-College has also been supportive, as they provided a test site for Marginalia for Moodle.
+
+Open Journal Systems support was made possible by Dr. Rick Kopak's "Navigating Information Spaces" project at the University of British Columbia, funded by the Social Sciences and Humanities Research Council of Canada. Chia-ning Chiang and John Willinsky have also been essential in getting this project off the ground.
+
+Plone integration, multiuser display, and numerous bug fixes and other improvements were made possible by the UNDESA Africa i-Parliaments Action Plan project and their work integrating Marginalia into Bungeni and Plone.
+
+In addition, the following people have provided moral and technical support. Without these people and organizations this software would not exist. In rough chronological order:
+
+* Cindy Xin
+
+* Eric Schewe
+
+* Brent Lee
+
+* Trevor Bradley
+
+* Tom Lodge
+
+* Peter Reitsma
+
+* Alec Smecher
+
+* Flavio Zeni
+
+* Jean Jordaan
+
+* Eric Anderson
+
+* Darren Harkness
+
+* Danny Lee
+
+* Phil Abrami
+
+* Rhett Savage
+
+* Eva Bures

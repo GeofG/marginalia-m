@@ -1,0 +1,124 @@
+
+
+
+-- Marginalia for Moodle Installation --
+
+
+If you are upgrading from a release earlier than December 2008, you will need to update your database manually. See instructions below for the specific release from which you are upgradingbeforetaking any other steps, or you may mangle your data. You can tell that you have an old release because the install directory ismoodle/annotationrather thanmoodle/local/annotation.
+
+If you run into problems, please let me know. I don't have the resources to test on many configurations, so you're probably not the only one. I can't fix what I don't know about. My email address, sans punctuation, isgeof geof net.
+
+
+== Fresh Installation ==
+
+
+The installation requires the following:
+
+* PHP 5 or later (might still work on PHP 4.3 or later)
+
+* Moodle 1.8 or 1.9 (other versions of Moodle might require a bit of tweaking; the patch utility in step #2 below will let you know)
+
+* MySQL 4.1 or later (though a colleague has had success with MySQL 3; I haven't tested with earlier versions and I understand Postgres doesn't work)
+
+Install Moodlebeforeinstalling Marginalia. If you patch Moodle before running the Moodle installer, your Moodle istall may not run correctly.
+
+There are two components to the installation: patching the Moodle code and adding (or in the case of a Marginalia upgrade) updating the database. Note that these instructions are UNIX/Linux/Mac OS X only. There are no instructions for installing on Windows.
+
+I recommend making a backup of your entire Moodle directory tree before performing the install.1. Patch Moodle
+
+The patch file will update existing files in your Moodle installation. You should do this from a clean Moodle install. If you previously had an older version of Marginalia installed, you will need to restore the Moodle files to their unpatched state before going ahead. There are two versions of the patch: one for Moodle 1.8, another for Moodle 1.9. They are named moodle18.patch and moodle19.patch respectively. To apply the patch to a Moodle 1.9 installation,cdto yourmoodledirectory (or whatever it's called on your installation), copy inmoodle.patchand run the following command:
+
+patch -b -p 1 <moodle19.patch
+
+
+
+The digit after the-pis the number, not the letter L. The-boption is not strictly necessary, but it makes it easier to (manually) uninstall Marginalia by keeping copies of unpatched files.
+
+You should not see any errors. However, the official release of Moodle is constantly changing, so there is a possibility that this patch will not match your Moodle version. In this case, you may need to modify the source files by hand.
+
+Also, this command does not work with the version of patch provided with Solaris (and possibly with other Unix variants). If you're on Solaris, you can download the GNU patch utility.2. Install Marginalia Support Libraries
+
+Note:It is quite unlikely this will apply to you, but Marginalia uses the Moodlelocaldirectory. Some rare Moodle installations will already have code here which must not be deleted. In particular, ifdb/install.xmlalready exists, you will not want to replace your existing file with the one provided here. In that case, I suggest creating the database table manually.
+
+Note:If you have an existing Marginalia installation and you have changed the settings inannotation/config.php, you will want to make the same changes in the newconfig.phpfile.
+
+In addition to patching Moodle, you will need to add the Marginalia client- and server-side libraries, plus Moodle-specfic support code. These have been separated out from the Moodle patches in order to make Marginalia upgrades easier. Copy the contents of the suppliedmoodledirectory under the root of your Moodle installation. You should end up with a file structure like this (I have listed only one or two sample directories or files in each location so that you can confirm the layout is correct on your system; your moodle directory may be named differently):
+moodle/
+  blocks/
+    marginalia/
+      annotate.php
+      ...
+      marginalia/
+        annotation.js
+        ...
+      marginalia-php/
+        Annotation.php
+        ...
+    db/
+      install.xml
+    lang/
+      en_utf8/
+        annotation.php
+        help/
+          annotate.html
+          ...
+  mod/
+    forum/
+      permalink.php
+
+
+Make sure mod/forum/permalink.php is installed; otherwise, links from the summary page back to individual forum posts may not work.3. Install the Database
+
+Log in to Moodle as an administrator visit theNotificationslink in theSite Administrationsidebar. Moodle will then automatically create the necessary database table.Existing Users of Marginalia
+
+If you already have an older version of Marginalia installed (older than December 2008), you will need to take an additional step to make your existing annotations work with this version of the software.
+
+After creating the database, as described above (by clicking onNotifications), you must log into MySQL and execute the following command:
+
+update mdl_block set version=2008101800 where name='marginalia';
+
+
+
+Then, go back to Moodle and click on theNotificationslink a second time. Marginalia should convert your existing annotations so that they will work with the new software. (As of December 2008, Marginalia uses a new table in the database so your old annotation table will not be touched. In a pinch, you should be able to revert to an older Marginalia release without having to restore the database.)4. Modify Marginalia Security Settings
+
+There are a number of configuration settings inmoodle/local/annotation/config.php. Most likely you won't want to change them, but they may be worth looking at. In particular, the following could have security implications.ANNOTATION_REQUIRE_USER
+
+In the default configuration of Marginalia, public annotations are public toeveryone- even non-course members and non-users of Moodle - via the Atom feed. If someone wants to read your public annotations, can reach your server, and know the the correct URL, they can. This includes the ability to read the highlighted text associated with an annotation. If you wish to prevent this, setANNOTATION_REQUIRE_USERtotrue. This will also disable the Atom feed.AN_ADMINVIEWALL
+
+This makes it possible through a special Atom feed for administrator to view everyone's annotations, even if their visibility has been set to private. This doesnotmean administrators will see other users' private annotations in the margin or on the summary page or anywhere else within Moodle. Itdoesmean that if they fetch a special Atom feed they can get the data for all annotations by everyone. This feature can be useful for backup purposes, or to retrieve annotations for research without resorting to direct queries to the database. The Atom feed is XML, so an administrator would have to deliberately go looking for private data: this would never happen accidentally. If you don't want to allow this, set this option to false.AN_ADMINUPDATE
+
+As of December 2008, all previously-created annotations are absolute. Marginalia can automatically update old annotations, but it can only do this when the owning user visits a page displaying those annotations. When old annotations are mixed with new ones, margin notes can be displayed in the wrong order and in the wrong locations, not next to their associated highlights. This should only be an issue if users use the ability to view annotations by multiple users simultaneously, but in that case it could be a real problem. This would not happen if users could update each others' annotations, but that is not permitted as it could also allow malicious users to damage the annotations of others. This setting provides a compromise: it allows administrators to update annotations of other users. To fix the margin on a problem page, all the administrator needs to do is visit the page, view all the annotations, and they should all be fixed. If you don't need this feature (e.g. because you have a new Marginalia installation) or you are paranoid about security (an occupational hazard), you can switch it off for a marginal theoretical increase to security. However, even when switched on this does not allow administrators to do anything more than break highlights - viewing private data or modifying margin notes isn't possible.AN_USEKEYWORDS
+
+When a user types a margin note Marginalia, may try to autocomplete it to match any existing notes the user has used more than once. This flag can be used to switch that behavior off.AN_USESMARTQUOTE
+
+The quoting feature, visible as aQuotelink at the bottom of each message, and as quotation marks next to annotations, allows users to easily inject text from forum posts and annotations into posts they write. This setting can switch that off (e.g. if smartquoting goes berserk, which I suppose is possible as it's a new feature).5. Test Marginalia
+
+You should now be able to connect to your Moodle web server as usual. You should see an annotation margin if you visit a forum with posts while logged in. Select some text and click in the long vertical button in the right margin to create annotations. Now reload the page: your annotations should still be there.
+
+
+== Upgrading from Previous Marginalia Releases ==
+
+
+When upgrading from a pre-December 2008 release you will always need to start with Moodle install files that have not been patched previously for older versions of Marginalia. For future releases of Marginalia you will likely not need to change these files. I will note here when a version change makes that necessary.
+
+
+== Installation Problems ==
+
+
+If you have problems (common symptoms are that you can create annotations but they disappear when you reload the page, or you can only create one annotation - subsequent attempts fail), it is probably because of a misconfiguration. First, make sure that the URL through which you are accessing Moodle matches the one inconfig.php. If you are using a different url (e.g.localhostinstead of a numerical IP address), annotation will not work.
+
+If your URL matches your configuration, I recommend installing and running the Firebug extension for Firefox. Among other things, it tracks AJAX requests from a web page to the server. The first thing to look for (other than any explicit errors reported by Firebug) is the URL of the GET request sent to annotation/annotate.php with the parameter "format=atom" when a page with annotations is first loaded. Looking at the server response often immediately reveals the problem (assuming PHP error reporting is on).
+
+The upgrade code for older databases is less heavily used and tested than other parts of Marginalia. If you have any difficulty with it, be sure to contact me. My email address is displayed on my web site atwww.geof.net.
+
+
+== Known Issues ==
+
+
+There are no significant known issues with this release. If you find something, please let me know.
+
+
+== Uninstalling Annotation ==
+
+
+There is currently no automatic mechanism for uninstalling Marginalia, though it is certainly possible to do so by replacing the patched files with the.origversions and deleting added files. Some previous releases did have an uninstall script, but I don't want to release it again unless it is guaranteed to be safe for changed versions of Marginalia.
