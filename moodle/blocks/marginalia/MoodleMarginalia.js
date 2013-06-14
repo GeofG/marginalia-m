@@ -145,8 +145,7 @@ MoodleMarginalia.prototype.init = function( selectors )
 		allowAnyUserPatch: this.allowAnyUserPatch ? true : false,
 		displayNote: function(m,a,e,p,i) { moodleMarginalia.displayNote(m,a,e,p,i); },
 		editors: {
-			link: null,
-			'default':  Marginalia.newEditorFunc( YuiAutocompleteNoteEditor )
+			link: null
 		},
 		onMarginHeight: function( post ) { moodleMarginalia.fixControlMargin( post ); },
 		selectors: selectors
