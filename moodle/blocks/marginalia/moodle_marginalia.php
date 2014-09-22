@@ -209,7 +209,6 @@ abstract class mia_page_profile
 		// URLs used by drop-down menu handlers
 		$summaryurl = ANNOTATION_PATH.'/summary.php?user='.(int)$USER->id.'&url='.urlencode( $refurl );
 		$helpurl = ANNOTATION_PATH.'/help.php?component=block_marginalia&topic=annotate';
-		$tagsurl = ANNOTATION_PATH.'/tags.php?course='.(int)$course->id;
 		
 		$sitecontext = get_context_instance(CONTEXT_SYSTEM);
 		$allowAnyUserPatch = AN_ADMINUPDATE && (
@@ -240,7 +239,6 @@ abstract class mia_page_profile
 		$ssessioncookie = 'MoodleSession' . s($CFG->sessioncookie);
 		$ssummaryurl = $summaryurl;
 		$shelpurl = $helpurl;
-		$stagsurl = $tagsurl;
 		$ssplash = 'true' == $showsplashpref ? "'".get_string('splash',ANNOTATION_STRINGS)."'" : 'null';
 		$sstrings = $this->moodlemia->strings_js( );
 		
@@ -262,7 +260,6 @@ abstract class mia_page_profile
 			handlers: {
 				summary: function() { window.location = '$ssummaryurl'; },
 				help: function() { window.location = '$helpurl'; }
-				/*,tags: function() { window.location = '$stagsurl'; }*/
 				$plugin_handlers}
 			, splash: $ssplash
 			, strings: $sstrings
@@ -316,7 +313,6 @@ SCRIPT;
 		}
 		echo "  <option disabled='disabled'>——————————</option>\n";
 		echo "  <option value='summary'>".get_string('summary_link',ANNOTATION_STRINGS)."...</option>\n";
-	//	echo "  <option value='tags'>".get_string('edit_keywords_link',ANNOTATION_STRINGS)."...</option>\n";
 		
 		foreach ( $this->moodlemia->plugins as $plugin )
 		{
