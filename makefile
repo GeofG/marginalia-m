@@ -2,10 +2,13 @@
 # makefile for Marginalia for Moodle
 #
 
-MARGINALIA_PHP_DIR = $(shell pwd)/../marginalia-php/marginalia-php
-MARGINALIA_LIB_DIR = $(shell pwd)/../marginalia-lib/marginalia
-include ../marginalia-lib/marginalia-lib.mk
-include ../marginalia-php/marginalia-php.mk
+# These lib and php dirs used to point to the latest. Making a copy here
+# allows me to continue to use an older version, avoid all the minor
+# updates to Moodle to make it compatible, and not risk breaking it.
+MARGINALIA_PHP_DIR = $(shell pwd)/marginalia-php
+MARGINALIA_LIB_DIR = $(shell pwd)/marginalia-lib
+include marginalia-lib.mk
+include marginalia-php.mk
 
 DATE = $(shell date +'%Y%m%d')
 
@@ -88,9 +91,11 @@ version:
 	echo '    $$plugin->version = $(DATE)00;' >>$(VERSION_FILE)
 	echo '    $$plugin->requires = 2010112400;' >>$(VERSION_FILE)
 
+# Diff context is 7 lines due to blank or unhelpful lines resulting in patch in
+# the wrong place. (GNU diff default is 3.)
 $(ZIPDIR)/marginalia-m.patch:  moodle.orig moodle
 	mkdir -p $(ZIPDIR)
-	-diff -Bbur -x .svn -x .DS_Store moodle.orig moodle >$(ZIPDIR)/marginalia-m.patch
+	-diff -Bbr -u7 -x .svn -x .DS_Store moodle.orig moodle >$(ZIPDIR)/marginalia-m.patch
 	
 clean-zip:
 	rm -r $(ZIPDIR)
