@@ -61,9 +61,12 @@ README_FILES = \
  INSTALL.txt
 
 release:  zipcontents
-	cd $(OUTDIR); tar czf $(OUTNAME).tgz $(OUTNAME)
+	cd $(OUTDIR); zip -r $(OUTNAME).zip $(OUTNAME)
 	echo "Please confirm that this is the correct version for this release:"
 	grep plugin $(VERSION_FILE)
+
+# GitHub doesn't like tgz
+	#cd $(OUTDIR); tar czf $(OUTNAME).tgz $(OUTNAME)
 
 zipdir:
 	mkdir -p $(ZIPDIR)/moodle/blocks/marginalia/marginalia/3rd-party
