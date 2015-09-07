@@ -8,6 +8,14 @@ version release;  similarly, some fixes to the stand-alone version first appear
 in a Moodle release.  Keep in mind that often the Moodle release is the most
 up-to-date version of the Marginalia library.
 
+2015-09-07
+
+Add annotations to simple single-discussion forums, and to user pages that list
+posts by a given user.
+
+Move to GitHub.
+
+
 2015-04-06
 
 Smartquote isn't working. Turn it off for now.

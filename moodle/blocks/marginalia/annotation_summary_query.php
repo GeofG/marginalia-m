@@ -170,9 +170,13 @@ class annotation_summary_query
 		elseif ( preg_match( '/^.*\/mod\/forum\/permalink\.php\?p=(\d+)/', $url, $matches ) )
 			return new post_annotation_url_handler( (int) $matches[ 1 ] );
 
+		// Annotations for a particular user
+		elseif ( preg_match( '/^.*\/mod\/forum\/user\.php\?id=(\d+)\&course=(\d+)/', $url, $matches ) )
+			return new course_annotation_url_handler( (int) $matches[ 2 ], (int) $matches[ 1 ] );
+
 		else
 		{
-			echo "no handler";
+			echo "no handler for " . $url;
 			return null;
 		}
 	}
@@ -542,9 +546,12 @@ class course_annotation_url_handler extends annotation_url_handler
 	var $parenturl;
 	var $parenttitlehtml;
 	
-	function course_annotation_url_handler( $courseid )
+	// Can fetch all annotations for the course, or just those for posts
+	// by a particular user.
+	function course_annotation_url_handler( $courseid, $post_authorid=NULL )
 	{
 		$this->courseid = $courseid;
+		$this->post_authorid = $userid;
 		$this->titlehtml = null;
 	}
 	
@@ -594,7 +601,8 @@ class course_annotation_url_handler extends annotation_url_handler
 		$params[ 'courseid' ] = $this->courseid;
 		return
 			"\n INNER JOIN {forum_discussions} d ON d.course= :courseid "
-			 . "\n INNER JOIN {forum_posts} p ON p.discussion=d.id AND a.object_type=".AN_OTYPE_POST." AND p.id=a.object_id "
+			 . "\n INNER JOIN {forum_posts} p ON p.discussion=d.id "
+			 . "AND a.object_type=".AN_OTYPE_POST." AND p.id=a.object_id "
 			 . "\n INNER JOIN {forum} f ON f.id=d.forum ";
 	}
 	
@@ -606,6 +614,15 @@ class course_annotation_url_handler extends annotation_url_handler
 		{
 			$params[ 'ofuserid' ] = (int) $summary->ofuser->id;
 			$cond .= " AND a.quote_author_id= :ofuserid";
+		}
+		// It's regrettable that there are two different mechanisms for
+		// adding parameters: one through the summary argument, one through
+		// the constructor, and they don't work together. Ideally there
+		// would be one mechanism with the capability to set a given 
+		// parameter in either place.
+		if ( $this->post_authorid ) {
+			$params[ 'userid' ] = $this->post_authorid;
+			$cond .= " AND p.userid= :userid";
 		}
 		return $cond;
 	}

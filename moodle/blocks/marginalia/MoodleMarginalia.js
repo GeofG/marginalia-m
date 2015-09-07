@@ -105,9 +105,13 @@ MoodleMarginalia.prototype.onload = function( )
 	// not be the same as the page as a whole (e.g. in the case of the forum).
 	var x = window.location.href.indexOf( '#' );
 	var base = -1 == x ? window.location.href : window.location.href.substr( 0, x );
-	var matches = base.match( /\/mod\/forum\/discuss.php/ );
+	var matches = base.match( /\/mod\/forum\/discuss\.php/ );
 	if ( ! matches )
-		matches = base.match( /\/mod\/forum\/post.php/ );
+		matches = base.match( /\/mod\/forum\/post\.php/ );
+	if ( ! matches )
+		matches = base.match( /\/mod\/forum\/view\.php/ );
+	if ( ! matches )
+		matches = base.match( /\/mod\/forum\/user\.php/ );
 	if ( matches )
 	{
 		var selectors = {
@@ -199,7 +203,7 @@ MoodleMarginalia.prototype.init = function( selectors )
 MoodleMarginalia.prototype.enablePublishQuotes = function( )
 {
 	this.smartquote = new Smartquote( this.moodleRoot, this.selectors, this.smartquoteService );
-	this.smartquote.enable( marginalia.listPosts( ), marginalia.skipContent );
+	this.smartquote.enable( window.marginalia.listPosts( ), window.marginalia.skipContent );
 }
 
 MoodleMarginalia.prototype.enableSubscribeQuotes = function( name )

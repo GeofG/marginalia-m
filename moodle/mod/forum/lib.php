@@ -3482,6 +3482,7 @@ function forum_print_post($post, $discussion, $forum, &$cm, $course, $ownpost=fa
     $miamoodle = moodle_marginalia::get_instance( );
     $miaprofile = $miamoodle->get_profile( $PAGE->url->out( false ) );
     if ($miaprofile) {
+		$margin = $miaprofile->output_margin( );
         $output .= $miaprofile->output_margin( );
     }
     // #marginalia end
@@ -3517,7 +3518,7 @@ function forum_print_post($post, $discussion, $forum, &$cm, $course, $ownpost=fa
     // #marginalia begin
     // Ack.  Moodle assumes that commands should be links.  This doesn't work
     // for the quote button, because it has to call some JS to get the quote.
-    if ($miaprofile && AN_USESMARTQUOTE) {
+    if ($miaprofile && AN_USESMARTQUOTE ) {
         $commandhtml[] = $miaprofile->output_quote_button( $reply );
     }
     // #marginalia end
@@ -5582,6 +5583,18 @@ function forum_print_discussion($course, $cm, $forum, $discussion, $post, $mode,
     global $USER, $CFG;
 
     require_once($CFG->dirroot.'/rating/lib.php');
+
+	// #marginalia begin
+	// *not* putting JS last, even though that might speed up page load:
+	// more important to minimize patch footprint
+		global $PAGE;
+		$miamoodle = moodle_marginalia::get_instance( );
+		$miaprofile = $miamoodle->get_profile( $PAGE->url->out( false ) );
+		if ($miaprofile) {
+			$miaprofile->emit_body( $moodlemia );
+			$miaprofile->emit_margin_controls( $moodlemia );
+		}
+	// #marginalia end
 
     $ownpost = (isloggedin() && $USER->id == $post->userid);
 

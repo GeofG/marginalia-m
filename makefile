@@ -89,7 +89,7 @@ zipcontents: zipdir $(ZIPDIR)/marginalia-m.patch $(DOC_FILES) $(README_FILES) $(
 version:
 	echo '<?php' >$(VERSION_FILE)
 	echo '    $$plugin->version = $(DATE)00;' >>$(VERSION_FILE)
-	echo '    $$plugin->requires = 2010112400;' >>$(VERSION_FILE)
+	echo '    $$plugin->requires = 2014111003;' >>$(VERSION_FILE)
 
 # Diff context is 7 lines due to blank or unhelpful lines resulting in patch in
 # the wrong place. (GNU diff default is 3.)

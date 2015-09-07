@@ -17,15 +17,23 @@
     require_once("lib.php");
 
     $p = required_param( 'p', PARAM_INT );       // Post ID
-	$anuser = array_key_exists( 'anuser', $_GET ) ? $_GET[ 'anuser' ] : null;
 
+	global $DB;
 
-    if (! $post = get_record("forum_posts", "id", $p)) {
+    if (! $post = $DB->get_record("forum_posts", array("id" => $p))) {
         error("Post ID is incorrect or no longer exists");
     }
+
+	// If it's a simple single-discussion forum, redirect to the forum
+	$discussion = $DB->get_record('forum_discussions', array('id' => $post->discussion));
+	$forum = $DB->get_record('forum', array('id' => $discussion->forum));
+
+	if ('single' == $forum->type)
+		$url = 'view.php?id='.$forum->id.'#p'.$p;
+	else
+		$url = 'discuss.php?d='.$discussion->id.'#p'.$p;
 	
-	$d = $post->discussion;
-	$url = $anuser ? "discuss.php?d=$d&anuser=$anuser#m$p" : "discuss.php?d=$d#m$p";
+	//$url = $anuser ? "discuss.php?d=$d&anuser=$anuser#m$p" : "discuss.php?d=$d#m$p";
 
 	header( 'HTTP/1.1 303 See Other' );
 	header( 'Location: '.$url );

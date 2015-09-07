@@ -64,9 +64,14 @@ define( 'AN_SHEET_AUTHOR', 0x2 );
 define( 'AN_SHEET_PUBLIC', 0xffff );
 
 // Object types
+// Note that these are not passed for annotation creation.
+// Marginalia figures that out when the annotation is submitted by
+// looking at its url.
 define ( 'AN_OTYPE_POST', 1 );
 define ( 'AN_OTYPE_ANNOTATION', 2 );
 define ( 'AN_OTYPE_DISCUSSION', 3 );
+define ( 'AN_OTYPE_FORUM', 4);
+define ( 'AN_OTYPE_USER', 5);
 
 // Needed by several annotation functions - if not set, PHP will throw errors into the output
 // stream which causes AJAX problems.  Doing it this way in case moodle sets the TZ at some
@@ -209,7 +214,6 @@ abstract class mia_page_profile
 		// URLs used by drop-down menu handlers
 		$summaryurl = ANNOTATION_PATH.'/summary.php?user='.(int)$USER->id.'&url='.urlencode( $refurl );
 		$helpurl = ANNOTATION_PATH.'/help.php?component=block_marginalia&topic=annotate';
-		$tagsurl = ANNOTATION_PATH.'/tags.php?course='.(int)$course->id;
 		
 		$sitecontext = get_context_instance(CONTEXT_SYSTEM);
 		$allowAnyUserPatch = AN_ADMINUPDATE && (
@@ -226,29 +230,29 @@ abstract class mia_page_profile
 			}
 		}
 		
-		// These variable names are prefixed with "s" for "safe" (HTML safe)
-		$swwwroot = s($CFG->wwwroot);
-		$smiapath = s(ANNOTATION_PATH);
-		$suserid = s($USER->id);
-		$srefurl = s($refurl);
+		// The whole thing will be dumped in a CDATA section, so json escape it all
+		// These variable names are prefixed with "s" for "safe" (JS safe in this case)
+		$swwwroot = json_encode($CFG->wwwroot);
+		$smiapath = json_encode(ANNOTATION_PATH);
+		$suserid = json_encode($USER->id);
+		$srefurl = json_encode($refurl);
 		$slogger = $this->moodlemia->logger && $this->moodlemia->logger->is_active() ? 'true' : 'false';
 		$scourseid = (int)$course->id;
 		$sanypatch = $allowAnyUserPatch ? 'true' : 'false';
 		$scanannotate = $canannotate ? 'true' : 'false';
 		$susesmartquote = AN_USESMARTQUOTE ? 'true' : 'false';
 		$ssmartquoteicon = s(AN_SMARTQUOTEICON);
-		$ssessioncookie = 'MoodleSession' . s($CFG->sessioncookie);
-		$ssummaryurl = $summaryurl;
+		$ssessioncookie = json_encode('MoodleSession' . $CFG->sessioncookie);
+		$ssummaryurl = json_encode($summaryurl);
 		$shelpurl = $helpurl;
-		$stagsurl = $tagsurl;
 		$ssplash = 'true' == $showsplashpref ? "'".get_string('splash',ANNOTATION_STRINGS)."'" : 'null';
 		$sstrings = $this->moodlemia->strings_js( );
 		
 		return <<<SCRIPT
-	var moodleRoot = '$swwwroot';
-	var annotationPath = '$smiapath';
-	var url = '$srefurl';
-	var userId = '$suserid';
+	var moodleRoot = $swwwroot;
+	var annotationPath = $smiapath;
+	var url = $srefurl;
+	var userId = $suserid;
 	window.moodleMarginalia = new MoodleMarginalia(
 		annotationPath, url, moodleRoot, userId, $sprefs, {
 			useSmartquote: $susesmartquote,
@@ -257,12 +261,11 @@ abstract class mia_page_profile
 			allowAnyUserPatch: $sanypatch,
 			canAnnotate: $scanannotate,
 			smartquoteIcon: '$ssmartquoteicon',
-			sessionCookie: '$ssessioncookie',
+			sessionCookie: $ssessioncookie,
 			onKeyCreate: true,
 			handlers: {
-				summary: function() { window.location = '$ssummaryurl'; },
+				summary: function() { window.location = $ssummaryurl; },
 				help: function() { window.location = '$helpurl'; }
-				/*,tags: function() { window.location = '$stagsurl'; }*/
 				$plugin_handlers}
 			, splash: $ssplash
 			, strings: $sstrings
@@ -316,7 +319,6 @@ SCRIPT;
 		}
 		echo "  <option disabled='disabled'>——————————</option>\n";
 		echo "  <option value='summary'>".get_string('summary_link',ANNOTATION_STRINGS)."...</option>\n";
-	//	echo "  <option value='tags'>".get_string('edit_keywords_link',ANNOTATION_STRINGS)."...</option>\n";
 		
 		foreach ( $this->moodlemia->plugins as $plugin )
 		{
@@ -362,7 +364,7 @@ SCRIPT;
 	
 	public function output_quote_button( $canreply=true )
 	{
-		if ( $canreply )
+		if ( $canreply && AN_USESMARTQUOTE )
 		{
 			$output  = html_writer::tag( 'button',
 				'<span>'.get_string( 'quote_button', ANNOTATION_STRINGS ).'</span>',
@@ -439,6 +441,32 @@ class mia_profile_forum_display extends mia_page_profile
 		return $this->object_id;
 	}
 }
+
+/** PROBABLY NOT NEEDED:
+ * This is for a forum with a single discussion. The complication comes because
+ * it is displayed from view.php rather than discuss.php, and the URL is for
+ * the forum, not the discussion.
+		if (! $forum = $DB->get_record("forum", array("id" => (int) $matches[2]))) {
+			throw new mia_profile_exception();
+		}
+		if ($forum->type != 'single') {
+			throw new mia_profile_exception();
+		}
+		$discussions = $DB->get_records('forum_discussions', array('forum'=>$forum->id), 'timemodified ASC');
+		if ( empty( $discussions ) ) {
+			throw new mia_profile_exception();
+		}
+		// object_id will be the discussion, not the forum. 
+		// refurl is hacked to point to the _discussion_, not the forum. This means
+		// that urls back to the discussion by Marginalia might point there instead
+		// of to the top-level forum.
+		$d = array_pop( $discussions );
+		$did = $d->id;
+		$refurl = '/' . $matches[ 1 ] . '/mod/forum/discuss.php?d=' . $did;
+		parent::__construct( $moodlemia, $url, $object_id,  );
+
+		return new mia_profile_forum_display( $this, $refurl, $did, AN_OTYPE_FORUM );
+*/
 
 class mia_profile_forum_compose extends mia_page_profile
 {
@@ -568,10 +596,18 @@ class moodle_marginalia
 	 */
 	public function get_profile( $url )
 	{
+		global $DB;
+
 		if ( preg_match( '/^.*\/mod\/forum\/permalink\.php\?p=(\d+)/', $url, $matches ) )
 			return new mia_profile_forum_display( $this, $url, (int) $matches[ 1 ], AN_OTYPE_POST);
 		elseif ( preg_match( '/^.*\/mod\/forum\/discuss\.php\?d=(\d+)/', $url, $matches ) )
 			return new mia_profile_forum_display( $this, $url, (int) $matches[ 1 ], AN_OTYPE_DISCUSSION );
+		elseif ( preg_match( '/^(.*)\/mod\/forum\/view\.php\?id=(\d+)/', $url, $matches ) ) {
+			return new mia_profile_forum_display( $this, $url, (int) $matches[ 1 ], AN_OTYPE_FORUM );
+		}
+		elseif ( preg_match( '/^(.*)\/mod\/forum\/user\.php\?id=(\d+)/', $url, $matches ) ) {
+			return new mia_profile_forum_display( $this, $url, (int) $matches[ 1 ], AN_OTYPE_USER );
+		}
 		elseif ( preg_match( '/^.*\/mod\/forum\/post\.php/', $url, $matches ) )
 			return new mia_profile_forum_compose( $this, $url );
 		elseif ( preg_match( '/^.*\/blocks\/marginalia\/summary.php/', $url, $matches ) )
@@ -605,7 +641,7 @@ class moodle_marginalia
 			}
 		}
 		
-		/*
+		/* I SUSPECT THIS WAS MEANT TO REPLACE THE SWITCH ABOVE, BUT IS NOT USED.
 		 * Profiles for Marginalia functionality on a particular page.  Used by
 		 * moodle_marginalia to decide which files to include and which functionality
 		 * to activate.
@@ -616,9 +652,13 @@ class moodle_marginalia
 		 * possible.  Instead the page can simply select a profile.  This can even be
 		 * made automatic based on the page URL, which Moodle pages already set.
 		 * 
-		 * What's with PHP's retarded refusal to parse array( new ... )?  Why
+		 * What's with PHP's refusal to parse array( new ... )?  Why
 		 * do people put up with this crap language?
 		 */
+		$this->page_profiles[ ] = new mia_profile_forum_display( $this,
+			'forum_forum',
+			'/^.*\/mod\/forum\/view\.php\?id=(\d+)/',
+			AN_OTYPE_FORUM);
 		$this->page_profiles[ ] = new mia_profile_forum_display( $this,
 			'forum_post',
 			'/^.*\/mod\/forum\/permalink\.php\?p=(\d+)/',

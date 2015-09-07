@@ -348,14 +348,7 @@ if ($forum->type != 'single'
     echo "</div>";
 }
 
-// #marginalia begin
-// *not* putting JS last, even though that might speed up page load:
-// more important to minimize patch footprint
-if ($miaprofile) {
-	$miaprofile->emit_body( $moodlemia );
-	$miaprofile->emit_margin_controls( $moodlemia );
-}
-// #marginalia end
+// marginalia was here
     
 echo '<div class="clearfloat">&nbsp;</div>';
 echo "</div>";

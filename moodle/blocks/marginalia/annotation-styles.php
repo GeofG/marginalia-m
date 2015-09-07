@@ -114,7 +114,7 @@ table td#annotation-controls {
 	position: relative;
 	/* unfortunately the background color has been interfering with the rounded corners
 	of the default moodle theme, so for now it's disabled */
-	/*background-color:  #f8f8f8; <?PHP echo $THEME->cellcontent2; ?>;*/
+	/*background-color:  #f8f8f8; [?PHP echo $THEME-]cellcontent2; ?];*/
 }
 
 .mia_margin li {
