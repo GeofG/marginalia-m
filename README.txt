@@ -2,11 +2,11 @@ Marginalia for Moodle Readme
 
 Marginalia for Moodle provides annotation support for Moodle discussion forums. 
 For updates to this release and for a stand-alone demo version of the code, 
-please see the Marginalia web site at webmarginalia.net.  Contact us at
+please see the Marginalia web site at webmarginalia.net. Contact us at
 support@webmarginalia.net - and if you find the software useful please drop us
 a line to let us know.
 
-The following files contain further documentation on specific topics.  In 
+The following files contain further documentation on specific topics. In 
 particular, see INSTALL.txt for installation instructions.
 
 CREDITS.txt - a list of people and organizations who assisted in the development 
@@ -16,7 +16,7 @@ INSTALL.txt - installation instructions
 CHANGES.txt - changes and bugfixes in this release
 
 
-Most of the code is Copyright (c) 2005-2011 Geoffrey Glass and the United 
+Most of the code is Copyright (c) 2005-2015 Geoffrey Glass and the United 
 Nations.
 
 This program is free software; you can redistribute it and/or modify it under
@@ -35,13 +35,13 @@ Place - Suite 330, Boston, MA 02111-1307, USA.
 
 Limitations and Known Bugs
 
-I have only tested Marginalia with MySQL.  It is likely it does not work with
-other databases supported by Moodle, such as Postgres.  That said, I have been
+I have only tested Marginalia with MySQL. It is likely it does not work with
+other databases supported by Moodle, such as Postgres. That said, I have been
 improving the database code in Marginalia and it is possible it might work.
 
 Internet Explorer has limited support for a number of standards used by
-Marginalia.  Users of IE will find that it does not support some interface
+Marginalia. Users of IE will find that it does not support some interface
 refinements and may notice the software running more slowly.
 
-If you discover bugs in Marginalia, please let me know.  A lack of quality bug 
+If you discover bugs in Marginalia, please let me know. A lack of quality bug 
 reports has been a significant barrier to improving the software.

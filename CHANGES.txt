@@ -8,10 +8,27 @@ version release;  similarly, some fixes to the stand-alone version first appear
 in a Moodle release.  Keep in mind that often the Moodle release is the most
 up-to-date version of the Marginalia library.
 
-2014-09
+2015-04-06
 
-There have been no feature changes since 2011. Releases since then have
-fixed a few bugs and updated the patch to keep current with Moodle. 
+Smartquote isn't working. Turn it off for now.
+
+
+2014-09-27
+
+Update to work with Moodle 2.7.
+
+
+2013-06-14
+
+Update to work with Moodle 2.5.
+
+Removed YUI code, which includes autocomplete for margin notes.
+
+
+2013-03-08
+
+Branch Moodle version, as some improvements in others are buggy.
+
 
 2011-05 (Moodle)
   This is a major release, focusing on three areas:  Moodle 2.0 integration,
