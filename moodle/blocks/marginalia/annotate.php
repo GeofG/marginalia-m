@@ -28,7 +28,7 @@
  * $Id$
  */
 
- require_once( "../../config.php" );
+require_once( "../../config.php" );
 require_once( 'config.php' );
 require_once( 'marginalia-php/Annotation.php' );
 require_once( 'marginalia-php/AnnotationService.php' );
@@ -37,7 +37,6 @@ require_once( 'moodle_marginalia.php' );
 require_once( 'annotation_summary_query.php' );
 
 global $DB;
-
 if ( $CFG->forcelogin || ANNOTATION_REQUIRE_USER )
    require_login();
  
@@ -159,7 +158,7 @@ class moodle_annotation_service extends AnnotationService
 		{
 			$queryparams = array( );
 			$querysql = $summary->sql( $queryparams );
-			//echo "QUERY: $querysql\n";
+			//echo "QUERY: <pre>$querysql</pre>\n";
 			//echo "PARAMS: \n";
 			//foreach ( $queryparams as $key => $value )
 			//	echo "  $key => $value\n";
@@ -463,4 +462,3 @@ if ( $logblock )
 $service = new moodle_annotation_service( isguestuser() ? null : $USER->id,
 	$logger && $logger->is_active() ? $logger : null );
 $service->dispatch( );
-

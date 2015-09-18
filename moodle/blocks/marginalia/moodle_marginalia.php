@@ -994,7 +994,7 @@ class moodle_marginalia
 			$cm = get_coursemodule_from_instance( $handler->modulename, $handler->modinstanceid, $handler->courseid);
 			if ( $cm )
 			{
-				$modcontext = get_context_instance( CONTEXT_MODULE, $cm->id );
+				$modcontext = get_context_instance( CONTEXT_MODULE, $cm->id, $USER );
 //				if ( has_capability('moodle/legacy:guest', $context, $USER->id, false ) )
 //					return false;
 				if ( ! $handler->capannotate )
@@ -1006,7 +1006,10 @@ class moodle_marginalia
 				return false;
 		}
 		else
-			return false;
+		{
+			$modcontext = context_system::instance();
+			return has_capability( $handler->capannotate, $modcontext, $USER );
+		}
 	}	
 
 	/**

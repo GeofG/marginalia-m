@@ -170,10 +170,12 @@ class annotation_summary_query
 		elseif ( preg_match( '/^.*\/mod\/forum\/permalink\.php\?p=(\d+)/', $url, $matches ) )
 			return new post_annotation_url_handler( (int) $matches[ 1 ] );
 
-		// Annotations for a particular user
+		// Annotations for a particular user in a particular course
 		elseif ( preg_match( '/^.*\/mod\/forum\/user\.php\?id=(\d+)\&course=(\d+)/', $url, $matches ) )
 			return new course_annotation_url_handler( (int) $matches[ 2 ], (int) $matches[ 1 ] );
-
+		// Annotations for a particular user in a particular user in all courses
+		elseif ( preg_match( '/^.*\/mod\/forum\/user\.php\?id=(\d+)/', $url, $matches ) )
+			return new user_annotation_url_handler( (int) $matches[ 1 ] );
 		else
 		{
 			echo "no handler for " . $url;
@@ -532,6 +534,82 @@ class annotation_url_handler
 /*
  * Oh, for a language with proper lists...
  */
+
+/**
+ * For cases where we know the user, but not the course (user.php).
+ * Code overlaps a lot with course_annotation_url_handler, but I
+ * don't want to factor prematurely.
+ */
+class user_annotation_url_handler extends annotation_url_handler
+{
+	var $courseid;
+	var $titlehtml;
+	var $parenturl;
+	var $parenttitlehtml;
+	
+	// Can fetch all annotations of posts by a given user
+	function user_annotation_url_handler( $post_authorid=NULL )
+	{
+		$this->courseid = null;
+		$this->post_authorid = $post_authorid;
+		$this->titlehtml = null;
+		$this->parenturl = null;
+		$this->parenttitlehtml = null; 
+		$this->modulename = 'none';
+		$this->capannotate = 'mod/forum:replypost';
+	}
+	
+	/** No metadata since we're not in a course, discussion, etc.
+	  */
+	function fetch_metadata( )
+	{ return; }
+	
+	// Override the default implementation of get_sql
+	function get_sql( &$params, $summary )
+	{
+		global $CFG, $DB;
+		
+		// First section:  discussion posts
+		$params[ 'section_url_base' ] = $CFG->wwwroot.'/mod/forum/view.php?id=';
+		$q = "SELECT" . $summary->get_sql_fields( $params )
+			 . ",\n 'forum' AS section_type, 'content' AS row_type"
+			 . ",\n f.name AS section_name"
+			 . ",\n ".$DB->sql_concat(':section_url_base','f.id')." AS section_url"
+			. "\n FROM" . $summary->get_sql_tables( $params ) . $this->get_tables( $params, $summary )
+			. "\n WHERE" . $summary->get_sql_conds( $params ) . $this->get_conds( $params, $summary )
+			. ( $summary->orderby ? "ORDER BY $summary->orderby" : '' );
+		
+		// If further types of objects can be annotated, additional SELECT statements must be added here
+		// as part of a UNION.		
+		
+		return $q;
+	}
+
+	function get_tables( &$params )
+	{
+		$params[ 'courseid' ] = $this->courseid;
+		return "INNER JOIN {forum_posts} p ON a.object_type=".AN_OTYPE_POST
+				." AND p.id=a.object_id "
+			 . "\n INNER JOIN {forum_discussions} d ON d.id=p.discussion"
+			 . "\n INNER JOIN {forum} f ON f.id=d.forum and f.course=d.course";
+	}
+	
+	function get_conds( &$params, $summary )
+	{
+		$params[ 'object_type' ] = AN_OTYPE_POST;
+		$params[ 'userid' ] = $this->post_authorid;
+		$cond = "\n  AND a.object_type= :object_type"
+			. " AND p.userid= :userid";
+		if ( $summary->ofuser )
+		{
+			$params[ 'ofuserid' ] = (int) $summary->ofuser->id;
+			$cond .= " AND a.quote_author_id= :ofuserid";
+		}
+		return $cond;
+	}
+}
+
+
 /*
  A course handler is a nice enough idea, but what does it mean?  Does it retrieve all annotations for
  that course, or shoud there actually be a way to get all discussion annotations for a course?  How
@@ -551,7 +629,7 @@ class course_annotation_url_handler extends annotation_url_handler
 	function course_annotation_url_handler( $courseid, $post_authorid=NULL )
 	{
 		$this->courseid = $courseid;
-		$this->post_authorid = $userid;
+		$this->post_authorid = $post_authorid;
 		$this->titlehtml = null;
 	}
 	
@@ -754,6 +832,7 @@ class discussion_annotation_url_handler extends annotation_url_handler
 				. " WHERE d.id= :discussionid";
 			$row = $DB->get_record_sql( $query, array( 'discussionid' => $this->d ) );
 			$forumname = 'unknown';
+			$a = new stdClass();
 			if ( False !== $row )  {
 				$a->name = s( $row->name );
 				$this->titlehtml = get_string( 'discussion_name', ANNOTATION_STRINGS, $a );
