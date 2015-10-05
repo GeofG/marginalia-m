@@ -602,8 +602,8 @@ class moodle_marginalia
 			return new mia_profile_forum_display( $this, $url, (int) $matches[ 1 ], AN_OTYPE_POST);
 		elseif ( preg_match( '/^.*\/mod\/forum\/discuss\.php\?d=(\d+)/', $url, $matches ) )
 			return new mia_profile_forum_display( $this, $url, (int) $matches[ 1 ], AN_OTYPE_DISCUSSION );
-		elseif ( preg_match( '/^(.*)\/mod\/forum\/view\.php\?id=(\d+)/', $url, $matches ) ) {
-			return new mia_profile_forum_display( $this, $url, (int) $matches[ 1 ], AN_OTYPE_FORUM );
+		elseif ( preg_match( '/^(.*)\/mod\/forum\/view\.php\?(id|f)=(\d+)/', $url, $matches ) ) {
+			return new mia_profile_forum_display( $this, $url, (int) $matches[ 2 ], AN_OTYPE_FORUM );
 		}
 		elseif ( preg_match( '/^(.*)\/mod\/forum\/user\.php\?id=(\d+)/', $url, $matches ) ) {
 			return new mia_profile_forum_display( $this, $url, (int) $matches[ 1 ], AN_OTYPE_USER );

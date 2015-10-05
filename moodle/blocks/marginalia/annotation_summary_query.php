@@ -159,8 +159,8 @@ class annotation_summary_query
 			return new course_annotation_url_handler( (int) $matches[ 1 ]);
 
 		// All annotations far a single forum
-		elseif ( preg_match( '/^.*\/mod\/forum\/view\.php\?id=(\d+)/', $url, $matches ) )
-			return new forum_annotation_url_handler( (int) $matches[ 1 ] );
+		elseif ( preg_match( '/^.*\/mod\/forum\/view\.php\?(id|f)=(\d+)/', $url, $matches ) )
+			return new forum_annotation_url_handler( (int) $matches[ 2 ] );
 
 		// Annotations for a single discussion
 		elseif ( preg_match( '/^.*\/mod\/forum\/discuss\.php\?d=(\d+)/', $url, $matches ) )
