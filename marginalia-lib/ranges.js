@@ -1435,6 +1435,9 @@ RANGETEXT_TAGS = 2;
 function getTextRangeContent( range, fskip, mode )
 {
 	var s;
+
+	if ( ! mode )
+		mode = RANGETEXT_TEXT;
 	// Special case
 	if ( range.startContainer == range.endContainer )
 		s = range.startContainer.nodeValue.substring( range.startOffset, range.endOffset );
