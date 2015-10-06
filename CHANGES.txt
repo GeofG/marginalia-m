@@ -8,6 +8,10 @@ version release;  similarly, some fixes to the stand-alone version first appear
 in a Moodle release.  Keep in mind that often the Moodle release is the most
 up-to-date version of the Marginalia library.
 
+2015-09-06
+
+Fix bug for simple single-discussion forums and for highlights spanning paragraphs in posts written with Atto.
+
 2015-09-07
 
 Add annotations to simple single-discussion forums, and to user pages that list
