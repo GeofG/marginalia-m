@@ -343,8 +343,8 @@ echo html_writer::start_tag('div', array('class' => 'user-content'));
 	// *not* putting JS last, even though that might speed up page load:
 	// more important to minimize patch footprint
 		global $PAGE;
-		$miamoodle = moodle_marginalia::get_instance( );
-		$miaprofile = $miamoodle->get_profile( $PAGE->url->out( false ) );
+		$moodlemia = moodle_marginalia::get_instance( );
+		$miaprofile = $moodlemia->get_profile( $PAGE->url->out( false ) );
 		if ($miaprofile) {
 			$miaprofile->emit_body( $moodlemia );
 			$miaprofile->emit_margin_controls( $moodlemia );

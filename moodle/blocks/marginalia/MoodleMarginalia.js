@@ -135,8 +135,9 @@ MoodleMarginalia.prototype.init = function( selectors )
 	var annotationService = new RestAnnotationService( this.annotationPath + '/annotate.php', {
 		noPutDelete: true,
 		csrfCookie: this.sessionCookie } );
-	var keywordService = new RestKeywordService( this.annotationPath + '/keywords.php', true);
-	keywordService.init( null );
+	//var keywordService = new RestKeywordService( this.annotationPath + '/keywords.php', true);
+	//keywordService.init( null );
+	keywordService = null;	// KeywordNoteEditor is not currently implemented
 	var moodleMarginalia = this;
 	window.marginalia = new Marginalia( annotationService, this.loginUserId, this.sheet, {
 		preferences: this.preferences,

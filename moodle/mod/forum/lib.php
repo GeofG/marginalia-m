@@ -3479,8 +3479,8 @@ function forum_print_post($post, $discussion, $forum, &$cm, $course, $ownpost=fa
     // #marginalia begin
     // Write out the margin.  It goes before the content, then floats right.
     global $PAGE;
-    $miamoodle = moodle_marginalia::get_instance( );
-    $miaprofile = $miamoodle->get_profile( $PAGE->url->out( false ) );
+    $moodlemia = moodle_marginalia::get_instance( );
+    $miaprofile = $moodlemia->get_profile( $PAGE->url->out( false ) );
     if ($miaprofile) {
 		$margin = $miaprofile->output_margin( );
         $output .= $miaprofile->output_margin( );
@@ -5588,8 +5588,8 @@ function forum_print_discussion($course, $cm, $forum, $discussion, $post, $mode,
 	// *not* putting JS last, even though that might speed up page load:
 	// more important to minimize patch footprint
 		global $PAGE;
-		$miamoodle = moodle_marginalia::get_instance( );
-		$miaprofile = $miamoodle->get_profile( $PAGE->url->out( false ) );
+		$moodlemia = moodle_marginalia::get_instance( );
+		$miaprofile = $moodlemia->get_profile( $PAGE->url->out( false ) );
 		if ($miaprofile) {
 			$miaprofile->emit_body( $moodlemia );
 			$miaprofile->emit_margin_controls( $moodlemia );

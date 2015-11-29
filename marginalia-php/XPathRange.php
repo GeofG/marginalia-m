@@ -40,7 +40,7 @@ class XPathRange
 	{
 		if ( null != $this->start || null != $this->end )
 			die( "Attempt to modify XPathRange" );
-		$points = split( ';', $s );
+		$points = explode( ';', $s );
 		$this->start = new XPathPoint( $points[ 0 ] );
 		$this->end = new XPathPoint( $points[ 1 ] );
 	}
@@ -175,7 +175,7 @@ class XPathPoint
 			return true;
 		if ( preg_match( '/^\.\/\/(.*)$/', $xpath, $matches ) )
 			$xpath = $matches[ 1 ];
-		$parts = split( '/', $xpath );
+		$parts = explode( '/', $xpath );
 		foreach ( $parts as $part )
 		{
 			$part = trim( $part );

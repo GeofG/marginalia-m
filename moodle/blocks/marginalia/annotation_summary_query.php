@@ -737,6 +737,7 @@ class forum_annotation_url_handler extends annotation_url_handler
 			$row = $DB->get_record_sql( $query, array( 'forumid' => $this->f ) );
 			if ( False !== $row )
 			{
+				$a = new stdClass( );
 				$a->name = s( $row->name );
 				$this->titlehtml = get_string( 'forum_name', ANNOTATION_STRINGS, $a );
 				$this->courseid = (int) $row->course;

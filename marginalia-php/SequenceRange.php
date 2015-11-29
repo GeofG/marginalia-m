@@ -47,7 +47,7 @@ class SequenceRange
 			die( "Attempt to modify SequenceRange" );
 		// Standard format, e.g. 2/1.3.1;2/1.3.5
 		// OR old overlap format, e.g. /2/3.1;/2/3.5
-		$points = split( ';', $s );
+		$points = explode( ';', $s );
 		if ( 2 == count( $points ) )
 		{
 			$this->start = new SequencePoint( $points[ 0 ] );
@@ -136,12 +136,12 @@ class SequencePoint
 		// Also accepts block only, e.g. 2.7.1
 		if ( preg_match( '/^[0-9\.]*(\/\d*\.\d*\.\d*)?$/', $blockStr ) )
 		{
-			$sides = split( '/', $blockStr );
+			$sides = explode( '/', $blockStr );
 			if ( $sides[ 0 ] == '' )
 				$this->path = array( );
 			else
 			{
-				$parts = split( '\\.', $sides[ 0 ] );
+				$parts = explode( '\\.', $sides[ 0 ] );
 				$this->path = array( );
 				$n = count( $parts );
 				for ( $i = 0;  $i < $n;  ++$i )
@@ -150,7 +150,7 @@ class SequencePoint
 			
 			if ( count( $sides ) > 1 )
 			{
-				$counts = split( '\\.', $sides[ 1 ] );
+				$counts = explode( '.', $sides[ 1 ] );
 				assert( count( $counts ) == 3 );
 				if ( $this->lines === null )
 					$this->lines = null === $counts[ 0 ] ? null : (int) $counts[ 0 ];
@@ -164,7 +164,7 @@ class SequencePoint
 		elseif ( '/' == $blockStr[ 0 ] )
 		{
 			$dot = strpos( $blockStr, '.' );
-			$parts = split( '/', $blockStr );
+			$parts = explode( '/', $blockStr );
 			$n = count( $parts );
 			
 			// Transform the second call style (all one string)
