@@ -153,8 +153,8 @@ MoodleMarginalia.prototype.onload = function( pageName )
 				post_author: new Selector( '.author a', '.content .author a' ),
 				post_authorid: null,
 				post_date: null,
-				mia_notes: new selector( '.mia_margin', '.content .posting .mia_margin' ),
-				post_url: new selector( function( root) { return $( root ).prev( 'a' ); }, null,
+				mia_notes: new Selector( '.mia_margin', '.content .posting .mia_margin' ),
+				post_url: new Selector( function( root) { return $( root ).prev( 'a' ); }, null,
 					function( node ) { return '/mod/forum/permalink.php?p=' + node.id.substr( 1 ); } )
 			};
 			this.init( selectors );
