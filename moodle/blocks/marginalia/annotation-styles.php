@@ -79,6 +79,9 @@ table td#annotation-controls {
 	padding: 1px;
 	border: #f8f8f8 1px solid;
 	list-style-type: none;
+}
+
+.mia_annotated .mia_margin.mia_annotatable {
 	cursor: pointer;
 }
 

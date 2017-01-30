@@ -83,17 +83,22 @@ class moodle_annotation_service extends AnnotationService
 			$cm = get_coursemodule_from_instance( $handler->modulename, $handler->modinstanceid, $handler->courseid);
 			if ( $cm )
 			{
+				echo "Got course module.";
 				$modcontext = get_context_instance( CONTEXT_MODULE, $cm->id );
 				if ( ! $handler->capannotate )
 				{
+					echo "No capability";
 					$miagloberror = "never on this resource";
 					return false;	// annotation of this resource is never permitted
 				}
-				else
+				else {
+					echo "See what moodle says.";
 					return has_capability($handler->capannotate, $modcontext);
+				}
 			}
 			else
 			{
+				echo "No course module.";
 				$miagloberror = "no cm";
 				return false;
 			}
@@ -319,21 +324,8 @@ class moodle_annotation_service extends AnnotationService
 			$profile = $moodlemia->get_profile( $annotation->getUrl( ) );
 			if ( $profile )
 			{
-				$record->object_type = $profile->get_object_type( $annotation->getUrl( ) );
-				$record->object_id = $profile->get_object_id( $annotation->getUrl( ) );
-				// Find the post author
-				$query = 'SELECT p.userid AS quote_author_id, p.subject AS quote_title, d.course as course'
-					." FROM {forum_posts} p "
-					." JOIN {forum_discussions} d ON p.discussion=d.id"
-					." WHERE p.id=:object_id";
-				$resultset = $DB->get_record_sql( $query, array( 'object_id' => $record->object_id ) );
-				if ( $resultset && count ( $resultset ) != 0 )  {
-					$record->quote_author_id = (int)$resultset->quote_author_id;
-					$record->quote_title = $resultset->quote_title;
-					$record->course = $resultset->course;
-				}
-				else  {
-					$this->httpError( 400, 'Bad Request', 'No such forum post' );
+				if ( ! $profile->get_create_data( $record ) )  {
+					$this->httpError( 400, 'Bad Request', 'No such annotated object' );
 					return 0;
 				}
 			}

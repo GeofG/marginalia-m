@@ -225,6 +225,16 @@ function xmldb_block_marginalia_upgrade( $oldversion )
 	    upgrade_block_savepoint(true, 2010121800, 'marginalia' );
 	}
 	
+	// Quiz question answer attempts are determined by two IDs:
+	// qubaid (questions_usage_by_activity.id), and slot
+	if ( $oldversion < 2016121300 )  {
+		$table = new xmldb_table( 'marginalia' );
+		$field = new xmldb_field( 'object_id2', XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, XMLDB_NULL, null, '0', 'id' );
+        if (!$dbman->field_exists($table,$field)) {
+            $dbman->add_field( $table, $field );
+        }
+	}
+
 	return $result;
 }
 

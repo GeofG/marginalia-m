@@ -150,36 +150,45 @@ class annotation_summary_query
 
 	static function handler_for_url( $url )
 	{
+		global $USER;
+
 		// A course or something *must* be specified
 		if ( ! $url )
 			return null;
-		
-		// All annotations for a course
-		elseif ( preg_match( '/^.*\/course\/view\.php\?id=(\d+)/', $url, $matches ) )
-			return new course_annotation_url_handler( (int) $matches[ 1 ]);
 
-		// All annotations far a single forum
-		elseif ( preg_match( '/^.*\/mod\/forum\/view\.php\?(id|f)=(\d+)/', $url, $matches ) )
-			return new forum_annotation_url_handler( (int) $matches[ 2 ] );
+		$page_info = new mia_page_info($url);
 
-		// Annotations for a single discussion
-		elseif ( preg_match( '/^.*\/mod\/forum\/discuss\.php\?d=(\d+)/', $url, $matches ) )
-			return new discussion_annotation_url_handler( (int) $matches[ 1 ] );
-
-		// Annotations for a single post
-		elseif ( preg_match( '/^.*\/mod\/forum\/permalink\.php\?p=(\d+)/', $url, $matches ) )
-			return new post_annotation_url_handler( (int) $matches[ 1 ] );
-
-		// Annotations for a particular user in a particular course
-		elseif ( preg_match( '/^.*\/mod\/forum\/user\.php\?id=(\d+)\&course=(\d+)/', $url, $matches ) )
-			return new course_annotation_url_handler( (int) $matches[ 2 ], (int) $matches[ 1 ] );
-		// Annotations for a particular user in a particular user in all courses
-		elseif ( preg_match( '/^.*\/mod\/forum\/user\.php\?id=(\d+)/', $url, $matches ) )
-			return new user_annotation_url_handler( (int) $matches[ 1 ] );
-		else
-		{
-			echo "no handler for " . $url;
-			return null;
+		switch ($page_info->page) {
+			// All annotations for a course
+			case '/course/view':
+				return new course_annotation_url_handler($page_info->params['course']);
+			// All annotations far a single forum
+			case '/mod/forum/view':
+				return new forum_annotation_url_handler($page_info->params['forum']);
+			// Annotations for a single discussion
+			case '/mod/forum/discuss':
+				return new discussion_annotation_url_handler($page_info->params['discussion']);
+			// Annotations for a single post
+			case '/mod/forum/permalink':
+				return new post_annotation_url_handler($page_info->params['post']);
+			// Annotations for a particular user in a particular course
+			case '/mod/forum/user':
+				return new user_annotation_url_handler($page_info->params['user']);
+			// Annotations for a report of quiz answers for grading
+			case '/mod/quiz/report':
+				return new quiz_report_annotation_url_handler(
+					$page_info->params['cm'], $page_info->params['slot']);
+			case '/mod/quiz/review':
+				return new quiz_review_annotation_url_handler(
+					$USER->id, $page_info->params['attempt']);
+			// Annotation far a question attempt
+			case '/mod/quiz/reviewquestion':
+			case '/mod/quiz/comment':
+				return new attempt_annotation_url_handler($page_info, 
+					$page_info->params['attempt'], $page_info->params['slot']);
+			default:
+				echo "no handler for " . $url;
+				return null;
 		}
 	}
 	
@@ -233,18 +242,21 @@ class annotation_summary_query
 		$parent_summary = $this->handler->parenturl ? $this->derive( array( 'url' => $this->handler->parenturl ) ) : null;
 		if ( $parent_summary ) {
 			$a->title = '<a class="opt-link" href="'.s( $parent_summary->summary_url( ) )
-				. '" title="'.get_string( 'unzoom_url_hover', ANNOTATION_STRINGS ).'">'
-				. '<span class="current">'.$a->title.'</span>'
-				. '<span class="alt">'.$parent_summary->titlehtml( ).'</span></a>';
+				.'" title="'.get_string( 'unzoom_url_hover', ANNOTATION_STRINGS ).'">'
+				.'<span class="current">'.$a->title.'</span>'
+				.'<span class="alt">'.$parent_summary->titlehtml( ).'</span></a>';
 		}
 		
 		// Unzoom from user to anyone
 		if ( $this->user )  {
 			$summary_anyone = $this->derive( array( 'user' => null ) );
-			$a->who = '<a class="opt-link" href="'.s( $summary_anyone->summary_url( ) )
-				.'" title="'.get_string( 'unzoom_user_hover', ANNOTATION_STRINGS )
-				.'"><span class="current">'.s( $this->moodlemia->fullname( $this->user ) ).'</span><span class="alt">'
-				.get_string( 'anyone', ANNOTATION_STRINGS ).'</a></a>';
+			$surl = s( $summary_anyone->summary_url( ) );
+			$stitle = get_string( 'unzoom_user_hover', ANNOTATION_STRINGS );
+			$sname = s( $this->moodlemia->fullname( $this->user ) );
+			$salt = get_string( 'anyone', ANNOTATION_STRINGS );
+			$a->who = "<a class='opt-link' href='${surl}' title='${stitle}'>"
+				."<span class='current'>${sname}</span>"
+				."<span class='alt'>${salt}</span></a>";
 		}
 		else
 			$a->who = get_string( 'anyone', ANNOTATION_STRINGS );
@@ -503,6 +515,14 @@ class annotation_summary_query
 
 class annotation_url_handler
 {
+	public $courseid = null;
+	public $titlehtml = null;
+	public $parenturl = null;
+	public $parenttitlehtml = null;
+	public $modulename = 'none';
+	public $capannotate = null;
+	public $modinstanceid = null;
+
 	function annotation_url_handler( )
 	{ }
 	
@@ -542,19 +562,10 @@ class annotation_url_handler
  */
 class user_annotation_url_handler extends annotation_url_handler
 {
-	var $courseid;
-	var $titlehtml;
-	var $parenturl;
-	var $parenttitlehtml;
-	
 	// Can fetch all annotations of posts by a given user
 	function user_annotation_url_handler( $post_authorid=NULL )
 	{
-		$this->courseid = null;
 		$this->post_authorid = $post_authorid;
-		$this->titlehtml = null;
-		$this->parenturl = null;
-		$this->parenttitlehtml = null; 
 		$this->modulename = 'none';
 		$this->capannotate = 'mod/forum:replypost';
 	}
@@ -619,18 +630,12 @@ class user_annotation_url_handler extends annotation_url_handler
 */
 class course_annotation_url_handler extends annotation_url_handler
 {
-	var $courseid;
-	var $titlehtml;
-	var $parenturl;
-	var $parenttitlehtml;
-	
 	// Can fetch all annotations for the course, or just those for posts
 	// by a particular user.
 	function course_annotation_url_handler( $courseid, $post_authorid=NULL )
 	{
 		$this->courseid = $courseid;
 		$this->post_authorid = $post_authorid;
-		$this->titlehtml = null;
 	}
 	
 	/** Internal function to fetch title etc. setting the following fields:
@@ -710,11 +715,6 @@ class course_annotation_url_handler extends annotation_url_handler
 class forum_annotation_url_handler extends annotation_url_handler
 {
 	var $f;
-	var $titlehtml;
-	var $parenturl;
-	var $parenttitlehtml;
-	var $courseid;
-	var $capannotate;
 	
 	function forum_annotation_url_handler( $f )
 	{
@@ -797,17 +797,11 @@ class forum_annotation_url_handler extends annotation_url_handler
 class discussion_annotation_url_handler extends annotation_url_handler
 {
 	var $d;
-	var $titlehtml;
-	var $parenturl;
-	var $parenttitlehtml;
-	var $courseid;
 	var $forumid;
-	var $capannotate;
 	
 	function discussion_annotation_url_handler( $d )
 	{
 		$this->d = $d;
-		$this->titlehtml = null;
 		$this->capannotate = 'mod/forum:replypost';
 	}
 	
@@ -900,11 +894,6 @@ class discussion_annotation_url_handler extends annotation_url_handler
 class post_annotation_url_handler extends annotation_url_handler
 {
 	var $p;
-	var $titlehtml;
-	var $parenturl;
-	var $parenttitlehtml;
-	var $courseid;
-	var $capannotate;
 	
 	function post_annotation_url_handler( $p )
 	{
@@ -935,6 +924,7 @@ class post_annotation_url_handler extends annotation_url_handler
 			$this->modinstanceid = null;
 		}
 		else  {
+			$a = new stdClass( );
 			$a->name = s( $row->pname );
 			$this->titlehtml = get_string( 'post_name', ANNOTATION_STRINGS, $a );
 			$this->parenturl = $CFG->wwwroot.'/mod/forum/discuss.php?d='.$row->did;
@@ -967,6 +957,247 @@ class post_annotation_url_handler extends annotation_url_handler
 	{
 		$params[ 'object_type' ] = AN_OTYPE_POST;
 		$cond = "\n AND a.object_type= :object_type";
+		if ( $summary->ofuser )  {
+			$params[ 'ofuserid' ] = $summary->ofuser->id;
+			$cond .= " AND a.quote_author_id= :ofuserid";
+		}
+		return $cond;
+	}
+}
+
+class attempt_annotation_url_handler extends annotation_url_handler
+{
+	public $page_info;
+	public $attempt_id;
+	public $slot_id;
+	public $object_id;
+
+	function __construct( $page_info, $attempt, $slot )
+	{
+		parent::__construct( );
+		$this->page_info = $page_info;
+		$this->attempt_id = $attempt;
+		$this->slot_id = $slot;
+		$this->capannotate = 'mod/quiz:grade';
+	}
+
+	function fetch_metadata( )
+	{
+		global $DB;
+
+		if ( null != $this->titlehtml )
+			return;
+		$this->titlehtml = 'a quiz question';
+		$this->parenturl = null;
+		$this->parenttitlehtml = null;
+		$this->modulename = 'quiz';
+		// As the Moodle docs indicate, question_usages.id=quiz_attempts.id
+		$query = "SELECT qas.id AS object_id, quiz.course as course, "
+			." quiza.userid as quote_author_id, q.name as quote_title, quiz.id as quiz_id "
+			." FROM {question_attempt_step_data} qasd "
+			." JOIN {question_attempt_steps} qas ON qasd.attemptstepid=qas.id "
+			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
+			." JOIN {quiz_attempts} quiza ON qa.questionusageid=quiza.id "
+			." JOIN {quiz_slots} slots ON slots.slot=qa.slot "
+			." JOIN {question} q ON q.id=slots.questionid "
+			." JOIN {quiz} quiz ON quiza.quiz=quiz.id "
+			// Want only maximum step value
+			." LEFT OUTER JOIN {question_attempt_steps} qas2 ON qas.id=qas2.id "
+			."  AND qas.sequencenumber < qas2.sequencenumber "
+			." WHERE qa.slot=:slot AND qa.questionusageid=:attempt "
+			."  AND qasd.name='answer' "
+			."  AND qas2.id IS NULL";	// <- filter outer join for maximum step value
+		$resultset = $DB->get_record_sql( $query,
+			array( 'slot' => $this->slot_id, 'attempt' => $this->attempt_id ) );
+		if ( $resultset && count ( $resultset ) != 0 ) {
+			$this->courseid = (int) $resultset->course;
+			$this->object_id = (int) $resultset->object_id;
+			$this->modinstanceid = (int) $resultset->quiz_id;
+		}
+		else
+			throw new Exception( "No database records for question attempt." );
+	}
+
+	function get_fields ( &$params )
+	{
+		return ",\n 'attempt' AS section_type, 'attempt' AS row_type"
+			. ",\n quiz.name AS section_name"
+			. ",\n null AS section_url"
+			. ",\n 'attempt' AS object_type"
+			. ",\n qas.id AS object_id";
+	}
+
+	function get_tables( &$params )
+	{
+		// Don't bother with LEFT OUTER joins; if the attempts is deleted, we're
+		// really not interested in the annotations on it.
+		return " JOIN {question_attempt_steps} qas ON qas.id=a.object_id "
+			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
+			." JOIN {quiz_attempts} quiza ON qa.questionusageid=quiza.id "
+			." JOIN {quiz} quiz ON quiza.quiz=quiz.id ";
+	}
+
+	function get_conds( &$params, $summary )
+	{
+		$params[ 'object_type' ] = AN_OTYPE_ATTEMPT;
+		$cond = "\n AND a.object_type= :object_type"
+			."\n AND a.object_id=qas.id";
+		if ( $summary->ofuser )  {
+			$params[ 'ofuserid' ] = $summary->ofuser->id;
+			$cond .= " AND a.quote_author_id= :ofuserid";
+		}
+		return $cond;
+	}
+}
+
+class quiz_report_annotation_url_handler extends annotation_url_handler
+{
+	var $cm_id;
+	var $slot_id;
+	var $titlehtml;
+	var $parenturl;
+	var $parenttitlehtml;
+	var $courseid;
+	var $forumid;
+
+	function __construct( $cm_id, $slot )
+	{
+		parent::__construct( );
+		$this->cm_id = $cm_id;
+		$this->slot_id = $slot;
+		$this->capannotate = 'mod/quiz:grade';
+	}
+
+	function fetch_metadata( )
+	{
+		global $CFG, $DB;
+		
+		if ( null != $this->titlehtml )
+			return;
+		$this->titlehtml = 'a quiz';
+		$this->parenturl = null;
+		$this->parenttitlehtml = null;
+		$cm = get_coursemodule_from_id('quiz', $this->cm_id);
+		$this->modinstanceid = (int) $cm->instance;
+		$this->courseid = $cm->course;
+		$this->modulename = 'quiz';
+	}
+
+	function get_fields( &$params )
+	{
+		global $CFG, $DB;
+		//$params[ 'section_url_base' ] = $CFG->wwwroot.'/mod/quiz/report.php?id='
+		//	.$this->quiz_id.'&mode=grading&slot='.$this->slot_id.'&qid='.$this->slot_id
+		//	.'&grade=all';
+		return ",\n 'attempt' AS section_type, 'attempt' AS row_type"
+			. ",\n quiz.name AS section_name"
+			. ",\n null AS section_url"
+			. ",\n 'attempt' AS object_type"
+			. ",\n qasd.id AS object_id";
+	}
+	
+	function get_tables( &$params )
+	{
+		// Don't bother with LEFT OUTER joins; if the attempts is deleted, we're
+		// really not interested in the annotations on it.
+		return "\nJOIN {question_attempt_step_data} qasd "
+			." JOIN {question_attempt_steps} qas ON qasd.attemptstepid=qas.id "
+			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
+			." JOIN {quiz_attempts} quiza ON qa.questionusageid=quiza.id "
+			." JOIN {quiz} quiz ON quiza.quiz=quiz.id "
+			// Want only maximum step value
+			." LEFT OUTER JOIN {question_attempt_steps} qas2 ON qas.id=qas2.id "
+			."  AND qas.sequencenumber < qas2.sequencenumber ";
+	}
+	
+	function get_conds( &$params, $summary )
+	{
+		if ( $this->modinstanceid == null )
+			$this->fetch_metadata( );
+		$params[ 'object_type' ] = AN_OTYPE_ATTEMPT;
+		$cond = "\n AND qa.slot=:slot AND quiz.id=:quiz "
+			."\n AND qasd.name='answer' "
+			."\n AND qas2.id IS NULL"	// <- filter outer join for maximum step value
+			."\n AND a.object_type= :object_type"
+			."\n AND a.object_id=qas.id";
+		$params['quiz'] = $this->modinstanceid;
+		$params['slot'] = $this->slot_id;
+		if ( $summary->ofuser )  {
+			$params[ 'ofuserid' ] = $summary->ofuser->id;
+			$cond .= " AND a.quote_author_id= :ofuserid";
+		}
+		return $cond;
+	}
+}
+
+class quiz_review_annotation_url_handler extends annotation_url_handler
+{
+	var $attempt_id;
+
+	function __construct( $userid, $attempt )
+	{
+		parent::__construct( );
+		# don't use userid
+		$this->attempt_id = (int) $attempt;
+	}
+
+	function fetch_metadata( )
+	{
+		global $CFG, $DB;
+		
+		if ( null != $this->titlehtml )
+			return;
+		$this->titlehtml = 'a quiz';
+		$this->parenturl = null;
+		$this->parenttitlehtml = null;
+		$this->modulename = 'quiz';
+		$attempt = $DB->get_record( 'quiz_attempts', array( 'id' => $this->attempt_id ) );
+		$quiz = $DB->get_record( 'quiz', array( 'id' => $attempt->quiz ) );
+		$this->courseid = (int) $quiz->course;
+		$this->modinstanceid = (int) $this->attempt_id;
+	}
+
+	function get_fields( &$params )
+	{
+		global $CFG, $DB;
+		//$params[ 'section_url_base' ] = $CFG->wwwroot.'/mod/quiz/report.php?id='
+		//	.$this->quiz_id.'&mode=grading&slot='.$this->slot_id.'&qid='.$this->slot_id
+		//	.'&grade=all';
+		return ",\n 'attempt' AS section_type, 'attempt' AS row_type"
+			. ",\n quiz.name AS section_name"
+			. ",\n null AS section_url"
+			. ",\n 'attempt' AS object_type"
+			. ",\n qasd.id AS object_id";
+	}
+	
+	function get_tables( &$params )
+	{
+		// Don't bother with LEFT OUTER joins; if the attempts is deleted, we're
+		// really not interested in the annotations on it.
+		return "\nJOIN {question_attempt_step_data} qasd "
+			." JOIN {question_attempt_steps} qas ON qasd.attemptstepid=qas.id "
+			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
+			." JOIN {quiz_attempts} quiza ON qa.questionusageid=quiza.id "
+			." JOIN {quiz} quiz ON quiza.quiz=quiz.id "
+			// Want only maximum step value
+			." LEFT OUTER JOIN {question_attempt_steps} qas2 ON qas.id=qas2.id "
+			."  AND qas.sequencenumber < qas2.sequencenumber ";
+	}
+	
+	function get_conds( &$params, $summary )
+	{
+		if ( $this->modinstanceid == null )
+			$this->fetch_metadata( );
+		$params[ 'object_type' ] = AN_OTYPE_ATTEMPT;
+		$cond = 
+			"\n AND quiza.id=:attempt"
+			#."\n AND quiza.userid=:user"
+			."\n AND qasd.name='answer' "
+			."\n AND qas2.id IS NULL"	// <- filter outer join for maximum step value
+			."\n AND a.object_type= :object_type"
+			."\n AND a.object_id=qas.id";
+		#$params['user'] = $this->user_id;
+		$params['attempt'] = $this->modinstanceid;
 		if ( $summary->ofuser )  {
 			$params[ 'ofuserid' ] = $summary->ofuser->id;
 			$cond .= " AND a.quote_author_id= :ofuserid";

@@ -64,14 +64,22 @@ define( 'AN_SHEET_AUTHOR', 0x2 );
 define( 'AN_SHEET_PUBLIC', 0xffff );
 
 // Object types
-// Note that these are not passed for annotation creation.
+// Note that these are not passed from the client on annotation creation.
 // Marginalia figures that out when the annotation is submitted by
 // looking at its url.
+// These are used for profiles, and for figuring out what to query
+// in annotation_summary_query
+// Only some of these are ever stored in the database, namely:
+// POST and ATTEMPT.
+define ( 'AN_OTYPE_NONE', 0 );	// hack value for non-annotatable pages
 define ( 'AN_OTYPE_POST', 1 );
 define ( 'AN_OTYPE_ANNOTATION', 2 );
 define ( 'AN_OTYPE_DISCUSSION', 3 );
 define ( 'AN_OTYPE_FORUM', 4);
 define ( 'AN_OTYPE_USER', 5);
+define ( 'AN_OTYPE_COURSE', 6);
+define ( 'AN_OTYPE_ATTEMPT', 7);	// Quiz answers
+define ( 'AN_OTYPE_QUIZ', 8);	// Quiz grading
 
 // Needed by several annotation functions - if not set, PHP will throw errors into the output
 // stream which causes AJAX problems.  Doing it this way in case moodle sets the TZ at some
@@ -81,19 +89,28 @@ define ( 'AN_OTYPE_USER', 5);
 
 /**
  * A page profile knows the options enabled for a particular page, and
- * how to emit relevant HTML.  Stores page-specific information like post ID.
+ * how to emit relevant HTML. It's also used for figuring out which page
+ * when querying from annotation_summary_query. Stores page-specific 
+ * information like post ID.
+ * 
  * Immutable:  it should be safe to construct this multiple times for the same
  * page and get exactly the same version back.
  */
 abstract class mia_page_profile
 {
-	protected $url;
+	protected $page_info;
 	public $moodlemia;
+	public $object_type;
+	private $no_splash;
+	protected $nameDisplay;
 	
-	public function __construct( $moodlemia, $url )
+	public function __construct( $moodlemia, $page_info, $object_type, $no_splash )
 	{
 		$this->moodlemia = $moodlemia;
-		$this->url = $moodlemia->relative_url( $url );
+		$this->page_info = $page_info;
+		$this->object_type = $object_type;
+		$this->no_splash = $no_splash;
+		$this->nameDisplay = "everyone";
 	}
 	
 	/**
@@ -105,8 +122,43 @@ abstract class mia_page_profile
 	 * complete URL.  In the PHP code the term "refurl" is always used to
 	 * refer to such a partial URL.
 	 */
-	public abstract function get_refurl( );
+	public function get_refurl( )
+	{ 
+		$page_info = $this->page_info;
+		return $page_info->url;
+	}
 	
+	/**
+	 * Emit JS to insert all required JS and CSS
+	 *
+	protected function emit_auto( )
+	{
+		$blockpath = '/blocks/marginalia';
+		$css_files = array(
+			$blockpath."/marginalia/marginalia.css",
+			$blockpath."/annotation-styles.php");
+		$js_files = listMarginaliaJavascript( );
+		$js_files[] = $blockpath.'/marginalia-config.js';
+		$js_files[] = $blockpath.'/MoodleMarginalia.js';
+		// The fact that loader.js is separate from MoodleMarginalia.js
+		// is a legacy of migration from when I didn't do dynamic 
+		// insertion. Ideally it would not be a separate script.
+		echo "<script type='text/javascript'>\n//<![CDATA[\n"
+			. "function() {\n"
+			. "  var css_files = ['" . $css_files.join("','") . "'];\n"
+			. "  var js_files = ['" . $js_files.join("','") . "'];\n"
+			. "  var script = document.createElement('script');\n"
+			. "  script.src = '$blockpath/loader.js';\n"
+			. "  script.onload = function() {\n"
+			. "    marginalia_load_css(css_files);\n"
+			. "    marginalia_load_js(js_files);\n"
+			. "  };\n"
+			. "  var head = document.getElementsByTagName('head')[0];\n"
+			. "  head.appendChild(script)\n"
+			. "//]]>\n</script>\n";
+	}
+	*/
+
 	/**
 	 * Requires for annotation features
 	 */
@@ -195,7 +247,7 @@ abstract class mia_page_profile
 			AN_SPLASH_PREF => $this->moodlemia->get_pref( AN_SPLASH_PREF, 'true' )
 		);
 		
-		$showsplashpref = $prefs[ AN_SPLASH_PREF ];
+		$showsplashpref = $this->no_splash ? false : $prefs[ AN_SPLASH_PREF ];
 		
 		// Build a string of initial preference values for passing to Marginalia
 		$first = true;
@@ -247,6 +299,8 @@ abstract class mia_page_profile
 		$shelpurl = $helpurl;
 		$ssplash = 'true' == $showsplashpref ? "'".get_string('splash',ANNOTATION_STRINGS)."'" : 'null';
 		$sstrings = $this->moodlemia->strings_js( );
+		$pageName = $this->page_info->page;
+		$snameDisplay = json_encode($this->nameDisplay);
 		
 		return <<<SCRIPT
 	var moodleRoot = $swwwroot;
@@ -260,6 +314,7 @@ abstract class mia_page_profile
 			course: $scourseid,
 			allowAnyUserPatch: $sanypatch,
 			canAnnotate: $scanannotate,
+			nameDisplay: $snameDisplay,
 			smartquoteIcon: '$ssmartquoteicon',
 			sessionCookie: $ssessioncookie,
 			onKeyCreate: true,
@@ -271,7 +326,7 @@ abstract class mia_page_profile
 			, strings: $sstrings
 		}
 	);
-	window.moodleMarginalia.onload( );
+	window.moodleMarginalia.onload( '$pageName' );
 SCRIPT;
 	}
 	
@@ -354,8 +409,9 @@ SCRIPT;
 	
 	public function output_margin( )
 	{
+		$canannotate = $this->moodlemia->can_annotate( $refurl );
 		$output  = html_writer::tag('ol', '<li class="mia_dummyfirst"></li>',
-			array('class'=>'mia_margin'
+			array('class'=>'mia_margin'.($canannotate ? ' mia_annotatable' : '')
 				, 'style'=>'float:right;width:15em'
 				, 'title'=>get_string('create_margin', ANNOTATION_STRINGS)));
 		//$output .= html_writer::end_tag('ol');
@@ -377,43 +433,162 @@ SCRIPT;
 
 	/**
 	 * Emit require statements for head
+	 * Default version does nothing, as not all profiles emit something
 	 */
-	public abstract function emit_requires( );
+	public function emit_requires( ) { }
 	
 	/**
 	 * Emit additional stuff (JS) in the body
+	 * Default version does nothing, as not all profiles emit something
 	 */
-	public abstract function emit_body( );
-	
-	/**
-	 * Get the type of object (for annotation creation).  Defaults to
-	 * null.
-	 */
-	public function get_object_type( $url )
-	{  return null;  }
+	public function emit_body( ) { }
 	
 	/**
 	 * Get the id of an object (for annotation creation).  Defaults to null.
 	 */
-	public function get_object_id( $url )
+	public function get_object_id( )
 	{  return null;  }
+}
+
+class mia_profile_course extends mia_page_profile
+{
+	public $object_id = null;
+
+	public function __construct( $moodlemia, $page_info, $course_id )
+	{
+		parent::__construct( $moodlemia, $page_info, AN_OTYPE_COURSE );
+		$this->object_id = $course_id;
+	}
+
+	public function get_object_id( )
+	{ return $this->object_id; }
+}
+
+class mia_profile_quiz_grading extends mia_page_profile
+{
+	public $quiz_id;
+	public $slot_id = null;
+	
+	public function __construct( $moodlemia, $page_info, $quiz, $slot)
+	{
+		parent::__construct( $moodlemia, $page_info, AN_OTYPE_QUIZ, true );
+		$this->object_type = AN_OTYPE_QUIZ;
+		$this->quiz_id = $quiz;
+		$this->slot_id = $slot;
+		$this->nameDisplay = "quoteAuthors";
+	}
+	
+	public function emit_requires( )
+	{
+		$this->emit_requires_annotate( );
+		$this->moodlemia->emit_plugin_requires( );
+	}
+	
+	public function emit_body( )
+	{
+		$s = $this->margin_js( );
+		$this->emit_init_js( $s );
+		$this->moodlemia->emit_plugin_body( );
+	}
+	
+	public function get_object_id( )
+	{
+		return $this->object_id;
+	}
+}
+
+class mia_profile_question_attempt extends mia_page_profile
+{
+	public $attempt_id = null;
+	public $slot_id = null;
+	
+	// Had to reverse order of parameters because multiple IDs
+	public function __construct( $moodlemia, $page_info, $object_type, $attempt_id, $slot_id )
+	{
+		parent::__construct( $moodlemia, $page_info, $object_type, true );
+		$this->attempt_id = $attempt_id;
+		$this->slot_id = $slot_id;
+		$this->nameDisplay = "quoteAuthors";
+	}
+	
+	public function emit_requires( )
+	{
+		$this->emit_requires_annotate( );
+		$this->moodlemia->emit_plugin_requires( );
+	}
+	
+	public function emit_body( )
+	{
+		$s = $this->margin_js( );
+		$this->emit_init_js( $s );
+		$this->moodlemia->emit_plugin_body( );
+	}
+	
+	public function get_object_id( )
+	{
+		if ( ! $this->slot_id )
+			throw "Quiz attempt must specify slot";
+		// Find question attempt step ID, which is a single number identifying
+		// the annotated text.
+		$query = "SELECT qas.id AS 'id' "
+			. " FROM {question_attempt_step_data} qasd "
+			. " JOIN {question_attempt_steps} qas ON qasd.attemptstepid=qas.id "
+			. " JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
+			// Want only maximum step value
+			. " LEFT OUTER JOIN {question_attempt_steps} qas2 ON qas.id=qas2.id "
+			. "  AND qas.sequencenumber < qas2.sequencenumber "
+			. " WHERE qa.slot=:slot AND qa.questionusageid=:attempt "
+			. "  AND qasd.name='answer' "
+			. "  AND qas2.id IS NULL";	// <- filter outer join for maximum step value
+		$resultset = $DB->get_record_sql( $query,
+			array( 'attempt' => $this->attempt_id,
+				   'slot' => $this->slot_id ));
+		return ( $resultset && count( $resultset ) != 0 ) 
+			? $resultset->id : null;
+	}
+
+	/** Get data about annotated document (attempt): author, title, and course id */
+	public function get_create_data( $annotation_record )
+	{
+		global $DB;
+
+		$query = "SELECT qas.id AS object_id, quiz.course as course, "
+			." quiza.userid as quote_author_id, q.name as quote_title "
+			." FROM {question_attempt_step_data} qasd "
+			." JOIN {question_attempt_steps} qas ON qasd.attemptstepid=qas.id "
+			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
+			." JOIN {quiz_attempts} quiza ON qa.questionusageid=quiza.id "
+			." JOIN {quiz_slots} slots ON slots.slot=qa.slot "
+			." JOIN {question} q ON q.id=slots.questionid "
+			." JOIN {quiz} quiz ON quiza.quiz=quiz.id "
+			// Want only maximum step value
+			." LEFT OUTER JOIN {question_attempt_steps} qas2 ON qas.id=qas2.id "
+			."  AND qas.sequencenumber < qas2.sequencenumber "
+			." WHERE qa.slot=:slot AND qa.questionusageid=:attempt "
+			."  AND qasd.name='answer' "
+			."  AND qas2.id IS NULL";	// <- filter outer join for maximum step value
+		$resultset = $DB->get_record_sql( $query,
+			array( 'slot' => $this->slot_id, 'attempt' => $this->attempt_id ) );
+		if ( $resultset && count ( $resultset ) != 0 )  {
+			$annotation_record->object_type = AN_OTYPE_ATTEMPT;
+			$annotation_record->object_id = (int) $resultset->object_id;
+			$annotation_record->quote_author_id = (int)$resultset->quote_author_id;
+			$annotation_record->quote_title = $resultset->quote_title;
+			$annotation_record->course = (int) $resultset->course;
+			return true;
+		}
+		return false;
+	}
 }
 
 class mia_profile_forum_display extends mia_page_profile
 {
-	var $object_type = null;
 	var $object_id = null;
 	
-	public function __construct( $moodlemia, $url, $object_id, $object_type )
+	public function __construct( $moodlemia, $page_info, $object_type, $object_id )
 	{
-		parent::__construct( $moodlemia, $url );
-		$this->object_type = $object_type;
+		parent::__construct( $moodlemia, $page_info, $object_type );
 		$this->object_id = $object_id;
-	}
-	
-	public function get_refurl( )
-	{
-		return $this->url;
 	}
 	
 	public function emit_requires( )
@@ -431,14 +606,32 @@ class mia_profile_forum_display extends mia_page_profile
 		$this->moodlemia->emit_plugin_body( );
 	}
 	
-	public function get_object_type( $url )
-	{
-		return $this->object_type;
-	}
-	
-	public function get_object_id( $url )
+	public function get_object_id( )
 	{
 		return $this->object_id;
+	}
+
+	/** Get data about annotated document (post): author, title, and course id */
+	public function get_create_data( $annotation_record )
+	{
+		global $DB;
+
+		// Don't bother passing URL; it's not needed.
+		$annotation_record->object_type = $this->object_type;
+		$annotation_record->object_id = $this->object_id;
+		// Find 
+		$query = 'SELECT p.userid AS quote_author_id, p.subject AS quote_title, d.course as course'
+			." FROM {forum_posts} p "
+			." JOIN {forum_discussions} d ON p.discussion=d.id"
+			." WHERE p.id=:post_id";
+		$resultset = $DB->get_record_sql( $query, array( 'post_id' => $this->object_id ) );
+		if ( $resultset && count ( $resultset ) != 0 )  {
+			$annotation_record->quote_author_id = (int)$resultset->quote_author_id;
+			$annotation_record->quote_title = $resultset->quote_title;
+			$annotation_record->course = $resultset->course;
+			return true;
+		}
+		return false;
 	}
 }
 
@@ -472,9 +665,9 @@ class mia_profile_forum_compose extends mia_page_profile
 {
 	var $replypostid;	// id of the post to which this is a reply, or null
 	
-	public function __construct( $moodlemia, $url )
+	public function __construct( $moodlemia, $page_info )
 	{
-		parent::__construct( $moodlemia, $url );
+		parent::__construct( $moodlemia, $page_info, AN_OTYPE_POST );
 		$this->replypostid = optional_param('reply', 0, PARAM_INT);
 	}
 	
@@ -499,12 +692,7 @@ class mia_profile_forum_compose extends mia_page_profile
 		$this->moodlemia->emit_plugin_body( );
 	}
 	
-	public function get_object_type( $url )
-	{
-		return AN_OTYPE_POST;
-	}
-	
-	public function get_object_id( $url )
+	public function get_object_id( )
 	{
 		throw $this->replypostid;
 	}
@@ -522,13 +710,11 @@ class mia_profile_js extends mia_page_profile
 	
 	public function __construct( $moodlemia )
 	{
-		parent::__construct( $moodlemia, null );
+		parent::__construct( $moodlemia, null, AN_OTYPE_NONE );
 	}
 	
 	public function get_refurl( )
-	{
-		throw "Attempt to call moodle_profile_js::get_refurl";
-	}
+	{ throw "Attempt to call moodle_profile_js::get_refurl"; }
 	
 	public function emit_requires( )
 	{
@@ -544,15 +730,108 @@ class mia_profile_js extends mia_page_profile
 		$this->emit_init_js( $s );
 		$this->moodlemia->emit_plugin_body( );
 	}
-	
-	public function get_object_type( $url )
+}
+
+class mia_page_info
+{
+	public $url;
+	public $page;
+	public $params;
+	// If there is annotatable HTML on this page, this indicates its type:
+	public $object_type = AN_OTYPE_NONE;
+
+	function __construct( $url )
 	{
-		throw "Attempt to call moodle_profile_js::get_object_type";
-	}
-	
-	public function get_object_id( $url )
-	{
-		throw "Attempt to call moodle_profile_js::get_object_id";
+		$moodlemia = moodle_marginalia::get_instance( );
+		$this->url = $moodlemia->relative_url($url);
+		$this->params = array( );
+
+		$path = parse_url( $url, PHP_URL_PATH );
+		$query = parse_url( $url, PHP_URL_QUERY );
+		parse_str( $query, $params);
+
+		// Marginalia itself
+		if ( preg_match( '/^.*\/blocks\/marginalia\/(.*)/', $path, $matches ) ) {
+			switch ( $matches[ 1 ] ) {
+				case 'summary.php':
+					$this->page = '/blocks/marginalia/summary';
+					break;
+				default:
+					throw new Exception("Page URL unknown to Marginalia");
+			}
+		}
+		// Forum
+		elseif ( preg_match( '/^.*\/mod\/forum\/(.*)/', $path, $matches ) ) {
+			switch ( $matches[ 1 ] ) {
+				case 'discuss.php':
+					$this->page = '/mod/forum/discuss';
+					$this->object_type = AN_OTYPE_POST;
+					$this->params['discussion'] = (int) $params['d'];
+					break;
+				case 'permalink.php':
+					$this->page = '/mod/forum/permalink';
+					$this->object_type = AN_OTYPE_POST;
+					$this->params['post'] = (int) $params['p'];
+					break;
+				case 'view.php':
+					$id = isset( $params[ 'f' ] ) ? $params[ 'f' ] : $params [ 'id' ];
+					$this->page = '/mod/forum/view';
+					$this->object_type = AN_OTYPE_POST;
+					$this->params['forum'] = (int) $id;
+					break;
+				case 'user.php':
+					$this->page = '/mod/forum/user';
+					$this->object_type = AN_OTYPE_POST;
+					$this->params['user'] = (int) $params['id'];
+					if (isset($params['course']))
+						$this->params['course'] = (int) $params['course'];
+					break;
+				case 'post.php':
+					$this->page = '/mod/forum/post';
+					$this->object_type = AN_OTYPE_POST;
+					break;
+				default:
+					throw new Exception("Page URL unknown to Marginalia");
+			}
+		}
+		// Quiz
+		elseif ( preg_match( '/^.*\/mod\/quiz\/(.*)/', $path, $matches ) ) {
+			switch ( $matches[ 1 ] ) {
+				case 'report.php':
+					$this->page = '/mod/quiz/report';
+					$this->object_type = AN_OTYPE_ATTEMPT;
+					// I think this ID is the course module ID
+					$this->params['cm'] = (int) $params['id'];
+					$this->params['slot'] = (int) $params['slot'];
+					break;
+				case 'review.php':
+					$this->page = '/mod/quiz/review';
+					$this->object_type = AN_OTYPE_ATTEMPT;
+					$this->params['attempt'] = (int) $params['attempt'];
+					break;
+				case 'reviewquestion.php':
+					$this->page = '/mod/quiz/reviewquestion';
+					$this->object_type = AN_OTYPE_ATTEMPT;
+					$this->params['attempt'] = (int) $params['attempt'];
+					$this->params['slot'] = (int) $params['slot'];
+					break;
+				case 'comment.php':
+					$this->page = '/mod/quiz/comment';
+					$this->object_type = AN_OTYPE_ATTEMPT;
+					$this->params['attempt'] = (int) $params['attempt'];
+					$this->params['slot'] = (int) $params['slot'];
+					break;
+				default:
+					throw new Exception("Page URL unknown to Marginalia");
+			}
+		}
+		elseif ( preg_match( '/^.*\/course\/view\.php(.*)/', $path, $matches ) ) {
+			$this->page = '/course/view';
+			$this->object_type = AN_OTYPE_POST;	// #geof# Really?
+			$this->params['course'] = (int) $params['id'];
+		}
+		else
+			throw new Exception("Page URL unknown to Marginalia");
 	}
 }
 
@@ -566,8 +845,6 @@ class moodle_marginalia
 	var $viewfullnames = False;
 	var $viewfullnames_set = False;
 	
-	var $page_profiles = array( );
-
 	public static function get_instance( )
 	{
 		if ( ! moodle_marginalia::$singleton )
@@ -596,23 +873,53 @@ class moodle_marginalia
 	 */
 	public function get_profile( $url )
 	{
-		global $DB;
-
-		if ( preg_match( '/^.*\/mod\/forum\/permalink\.php\?p=(\d+)/', $url, $matches ) )
-			return new mia_profile_forum_display( $this, $url, (int) $matches[ 1 ], AN_OTYPE_POST);
-		elseif ( preg_match( '/^.*\/mod\/forum\/discuss\.php\?d=(\d+)/', $url, $matches ) )
-			return new mia_profile_forum_display( $this, $url, (int) $matches[ 1 ], AN_OTYPE_DISCUSSION );
-		elseif ( preg_match( '/^(.*)\/mod\/forum\/view\.php\?(id|f)=(\d+)/', $url, $matches ) ) {
-			return new mia_profile_forum_display( $this, $url, (int) $matches[ 2 ], AN_OTYPE_FORUM );
+		$params = array( );
+		$query = parse_url( $url, PHP_URL_QUERY );
+		parse_str( $query, $params);
+		$info = new mia_page_info($url);
+		switch ($info->page) {
+			// Forum:
+			case '/blocks/marginalia/summary':
+				return new mia_profile_js( $this );
+			case '/mod/forum/discuss':
+				return new mia_profile_forum_display( $this, $info,
+					AN_OTYPE_DISCUSSION, (int) $params[ 'd' ] );
+			case '/mod/forum/permalink':
+				return new mia_profile_forum_display( $this, $info, 
+					AN_OTYPE_POST, (int) $params[ 'p' ] );
+			case '/mod/forum/view':
+				$id = isset( $params[ 'f' ] ) ? $params[ 'f' ] : $params [ 'id' ];
+				return new mia_profile_forum_display( $this, $info,
+					AN_OTYPE_FORUM, (int) $id );
+			case '/mod/forum/user':
+				$course_id = isset( $params[ 'course' ] ) ?
+					(int) $params[ 'course' ] : null;
+				return new mia_profile_forum_display( $this, $info, AN_OTYPE_USER,
+					(int) $params[ 'id' ], $course_id );
+			case '/mod/forum/post':
+				return new mia_profile_forum_compose( $this, $info );
+			// Quiz:
+			case '/mod/quiz/report':
+			case '/mod/quiz/review':	// Works for this too!
+				return new mia_profile_quiz_grading( $this, $info, 
+					(int) $params['id'], (int) $params['slot'] );
+					/*
+				return new mia_profile_quiz_attempt( $this, $info,
+					AN_OTYPE_ATTEMPT, (int) $params[ 'attempt'], null );
+				break;
+			   */
+			case '/mod/quiz/reviewquestion':
+			case '/mod/quiz/comment':
+				return new mia_profile_question_attempt( $this, $info,
+					AN_OTYPE_ATTEMPT,
+					(int) $params[ 'attempt'], (int) $params[ 'slot' ] );
+				break;
+			// Course:
+			case '/course/view':
+				return new mia_profile_course( $this, $info, (int) $params[ 'id' ]);
+			default:
+				throw new Exception("Marginalia is unable to identify page");
 		}
-		elseif ( preg_match( '/^(.*)\/mod\/forum\/user\.php\?id=(\d+)/', $url, $matches ) ) {
-			return new mia_profile_forum_display( $this, $url, (int) $matches[ 1 ], AN_OTYPE_USER );
-		}
-		elseif ( preg_match( '/^.*\/mod\/forum\/post\.php/', $url, $matches ) )
-			return new mia_profile_forum_compose( $this, $url );
-		elseif ( preg_match( '/^.*\/blocks\/marginalia\/summary.php/', $url, $matches ) )
-			return new mia_profile_js( $this );
-		return null;
 	}
 	
 	public function moodle_marginalia( )
@@ -640,36 +947,6 @@ class moodle_marginalia
 				}
 			}
 		}
-		
-		/* I SUSPECT THIS WAS MEANT TO REPLACE THE SWITCH ABOVE, BUT IS NOT USED.
-		 * Profiles for Marginalia functionality on a particular page.  Used by
-		 * moodle_marginalia to decide which files to include and which functionality
-		 * to activate.
-		 *
-		 * This could be done by having the page itself set up the configuration.  But
-		 * that would require more changes to Moodle core code.  Since Marginalia has
-		 * to patch Moodle, it's best to make the patch as small and unchanging as
-		 * possible.  Instead the page can simply select a profile.  This can even be
-		 * made automatic based on the page URL, which Moodle pages already set.
-		 * 
-		 * What's with PHP's refusal to parse array( new ... )?  Why
-		 * do people put up with this crap language?
-		 */
-		$this->page_profiles[ ] = new mia_profile_forum_display( $this,
-			'forum_forum',
-			'/^.*\/mod\/forum\/view\.php\?id=(\d+)/',
-			AN_OTYPE_FORUM);
-		$this->page_profiles[ ] = new mia_profile_forum_display( $this,
-			'forum_post',
-			'/^.*\/mod\/forum\/permalink\.php\?p=(\d+)/',
-			AN_OTYPE_POST);
-		$this->page_profiles[ ] = new mia_profile_forum_display( $this,
-			'forum_discussion',
-			'/^.*\/mod\/forum\/discuss\.php\?d=(\d+)/',
-			AN_OTYPE_DISCUSSION );
-		$this->page_profiles[ ] = new mia_profile_forum_compose( $this,
-			'forum_compose', 
-			'/^.*\/mod\/forum\/post\.php/' );
 	}
 
 	function fullname($user)

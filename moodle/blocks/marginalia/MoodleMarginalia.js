@@ -46,6 +46,8 @@ function MoodleMarginalia( annotationPath, url, moodleRoot, userId, prefs, param
 	this.handlers = params.handlers;
 	this.course = params.course;
 	this.smartquoteService = params.smartquoteService;
+	this.canAnnotate = params.canAnnotate;
+	this.nameDisplay = params.nameDisplay;
 	LocalizedAnnotationStrings = params.strings;
 
 	var urlFunc = function( node )
@@ -83,50 +85,110 @@ function MoodleMarginalia( annotationPath, url, moodleRoot, userId, prefs, param
 }
 
 /**
- * Callback on page load to initialize Marginalia.
- * Looks at the page URL to determine which URL resource this is and 
- * figure out how to set Marginalia up.  If annotation is not supported for
+ * Get unique URL for a question answer attempt
+ *
+ * kind of hacky as Moodle might change. Currently, for each question
+ * answer in report or review, Moodle spits out something like:
+ *   <input name="q8:1_:sequencecheck" value="3" type="hidden"/>
+ * where for q8:1, 8 is the attempt and 1 is the slot
+ *
+ * I'm not sure if the step ID is also needed (if so, where do I
+ * get it?). Probably fine since this generates a real, working URL
+ * to that specific answer.
+ * #geof# need to test with multiple steps (attempted
+ * answers to the same question by the same student
+ * in the same quiz)
+*/
+MoodleMarginalia.getQuizAttemptUrl = function( root )
+{
+	var inputs = $( "input[type='hidden']", root );
+	for ( var i = 0; i < inputs.length; ++i ) {
+		var node = inputs[ i ];
+		var m = node.name.match( /(\d+):(\d+)_:sequencecheck/ );
+		if ( m ) {
+			var url = '/mod/quiz/reviewquestion.php?attempt=' + m[ 1 ] 
+				+ '&slot=' + m[ 2 ];
+			console.log("found quiz answer attempt: " + url);
+			return url;
+		}
+	}
+	return null;
+}
+
+/**
+ * callback on page load to initialize Marginalia.
+ * looks at the page url to determine which URL resource this is and 
+ * figure out how to set marginalia up.  If annotation is not supported for
  * this resource nothing happens.  Checking here rather than in the PHP
  * minimizes the number of patches that need to be applied to existing Moodle
  * code.
  */
-MoodleMarginalia.prototype.onload = function( )
+MoodleMarginalia.prototype.onload = function( pageName )
 {
+	console.log('page name: ' + pageName );
 	initLogging();
 
-	// Check whether this page should have annotations enabled at all
-	// The check is here rather in the PHP;  that minimizes the number of patches
+	// check whether this page should have annotations enabled at all
+	// the check is here rather in the PHP;  that minimizes the number of patches
 	// that need to be applied to existing Moodle code.
 	if ( ! this.loginUserId )
 		return;
 	
-	// Must first figure out which kind of page is being annotated,
-	// then return the correct URL for an individual *post*, which may
+	// must first figure out which kind of page is being annotated,
+	// then return the correct uRL for an individual *post*, which may
 	// not be the same as the page as a whole (e.g. in the case of the forum).
 	var x = window.location.href.indexOf( '#' );
 	var base = -1 == x ? window.location.href : window.location.href.substr( 0, x );
-	var matches = base.match( /\/mod\/forum\/discuss\.php/ );
-	if ( ! matches )
-		matches = base.match( /\/mod\/forum\/post\.php/ );
-	if ( ! matches )
-		matches = base.match( /\/mod\/forum\/view\.php/ );
-	if ( ! matches )
-		matches = base.match( /\/mod\/forum\/user\.php/ );
-	if ( matches )
-	{
-		var selectors = {
-			post: new Selector( '.forumpost', '.forumpost table.forumpost' ),
-			post_id: new Selector( function( root ) { return $( root ).prev( 'a' ); }, null, '@id' ),
-			post_content: new Selector( '.content .posting', '.content .content .posting' ),
-			post_title: new Selector( '.subject', '.content .subject' ),
-			post_author: new Selector( '.author a', '.content .author a' ),
-			post_authorid: null,
-			post_date: null,
-			mia_notes: new Selector( '.mia_margin', '.content .posting .mia_margin' ),
-			post_url: new Selector( function( root) { return $( root ).prev( 'a' ); }, null,
-				function( node ) { return '/mod/forum/permalink.php?p=' + node.id.substr( 1 ); } )
-		};
-		this.init( selectors );
+	// first check for forum annotations
+	switch ( pageName ) {
+		case '/mod/forum/discuss':
+		case '/mod/forum/post':
+		case '/mod/forum/view':
+		case '/mod/forum/user':
+			var selectors = {
+				post: new Selector( '.forumpost', '.forumpost table.forumpost' ),
+				post_id: new Selector( function( root ) { return $( root ).prev( 'a' ); }, null, '@id' ),
+				post_content: new Selector( '.content .posting', '.content .content .posting' ),
+				post_title: new Selector( '.subject', '.content .subject' ),
+				post_author: new Selector( '.author a', '.content .author a' ),
+				post_authorid: null,
+				post_date: null,
+				mia_notes: new selector( '.mia_margin', '.content .posting .mia_margin' ),
+				post_url: new selector( function( root) { return $( root ).prev( 'a' ); }, null,
+					function( node ) { return '/mod/forum/permalink.php?p=' + node.id.substr( 1 ); } )
+			};
+			this.init( selectors );
+			break;
+		// Currently report and review show answers the same way
+		// So that's nice.
+		case '/mod/quiz/report':
+		case '/mod/quiz/review':
+		case '/mod/quiz/reviewquestion':
+		case '/mod/quiz/comment':
+			var selectors = {
+				post: new Selector( '.que.essay' ),
+				// post.id is no longer needed, thank goodness: bloody Moodle uses 
+				// the same id value multiple times in the document!
+				post_id: null,
+				post_content: new Selector( '.ablock .qtype_essay_response' ),
+				post_title: null,
+				post_author: null,
+				post_authorid: null,
+				post_date: null,
+				mia_notes: new Selector( '.mia_margin' ),
+				// Selector's first argument must return element list, hence
+				// the identity function. Also need to fabricate a URL.
+				post_url: new Selector( function( root ) { return [root] }, 
+					null, MoodleMarginalia.getQuizAttemptUrl )
+			};
+			// Add annotation margins
+			$( '.que.essay .ablock .answer div' ).after(
+				'<ol class="mia_margin"><li class="mia_dummyfirst"></li></ol>');
+			$( 'body' ).addClass( 'mia_annotated' );
+			this.init(selectors);
+			break;
+		default:
+			console.log( 'Annotation not yet implemented for this page.' );
 	}
 }
 
@@ -148,6 +210,8 @@ MoodleMarginalia.prototype.init = function( selectors )
 		onkeyCreate:  true,
 		enableRecentFlag: true,
 		allowAnyUserPatch: this.allowAnyUserPatch ? true : false,
+		canAnnotate: this.canAnnotate,
+		nameDisplay: this.nameDisplay,
 		displayNote: function(m,a,e,p,i) { moodleMarginalia.displayNote(m,a,e,p,i); },
 		editors: {
 			link: null
@@ -188,16 +252,18 @@ MoodleMarginalia.prototype.init = function( selectors )
 	
 	// Highlight the margin when the mouse is over it - but not one of its children.
 	// Lets user know s/he can click to create an annotation.
-	var margin = jQuery( '.mia_margin' );
-	margin.mouseover( function( e ) { margin.toggleClass( 'hover', e.target == margin[0] ); } );
-	margin.mouseleave( function( ) { margin.removeClass( 'hover' ); } );
-	
-	if ( this.splash && this.sheet != Marginalia.SHEET_NONE )
-	{
-		var onclose = function() {
-			window.marginalia.preferences.setPreference( Marginalia.P_SPLASH, 'false', null);
-		};
-		window.marginalia.showTip( this.splash, onclose );
+	if ( this.canAnnotate ) {
+		var margin = jQuery( '.mia_margin' );
+		margin.mouseover( function( e ) { margin.toggleClass( 'hover', e.target == margin[0] ); } );
+		margin.mouseleave( function( ) { margin.removeClass( 'hover' ); } );
+		
+		if ( this.splash && this.sheet != Marginalia.SHEET_NONE )
+		{
+			var onclose = function() {
+				window.marginalia.preferences.setPreference( Marginalia.P_SPLASH, 'false', null);
+			};
+			window.marginalia.showTip( this.splash, onclose );
+		}
 	}
 };
 
@@ -305,7 +371,7 @@ MoodleMarginalia.prototype.cleanUpPostContent = function( )
 	{
 		f ( posts[ i ].getContentElement( ) );
 	}
-}
+};
 
 MoodleMarginalia.prototype.changeSheet = function( sheetControl, url )
 {
