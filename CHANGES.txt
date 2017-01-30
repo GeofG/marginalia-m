@@ -1,12 +1,22 @@
 Marginalia Change Log
 
-This change log includes changes to the stand-alone version of Marginalia and 
-to the Moodle annotation implementation.  The combined format simplifies my job 
-of keeping the log up-to-date, and reduces the change for error.  Note that most 
-bug fixes etc. from the stand-alone version apply to the subsequent Moodle 
-version release;  similarly, some fixes to the stand-alone version first appear 
-in a Moodle release.  Keep in mind that often the Moodle release is the most
-up-to-date version of the Marginalia library.
+Newer releases of Marginalia for Moodle are for later versions of Moodle. I do
+not maintain up-to-date releases for older versions of Moodle. That said, it
+is usually easy to make Marginalia work with older or newer releases of
+Moodle.
+
+I used to maintain separate stand-alone annotation code, but as it was not a
+complete working application it didn't get used much. I no longer maintain that
+version, but some older release notes refer to it. Most bug fixes and 
+enhancements for the stand-alone version apply to the subsequent Moodle 
+version release.
+
+2017-01-29
+
+Add annotation support to quiz essay questions. Only users with grading
+permissions can annotate. Names of annotating users are only visible to others
+with grading permissions. Release is for Moodle version 3.1.
+
 
 2015-09-07
 
