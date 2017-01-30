@@ -64,6 +64,8 @@ function Marginalia( service, loginUserId, sheet, features )
 	this.serviceErrorCallback = Marginalia.defaultErrorCallback;
 	this.enableRecentFlag = false;
 	this.lastUpdate = null;
+	this.canAnnotate = true;
+	this.nameDisplay = "everyone";
 	
 	this.selectors = {
 		post: new Selector( '.hentry', '.hentry .hentry' ),
@@ -98,6 +100,16 @@ function Marginalia( service, loginUserId, sheet, features )
 		var value = features[ feature ];
 		switch ( feature )
 		{
+			// If true, user names are not shown next to annotations
+			case 'nameDisplay':
+				this.nameDisplay = value;
+				break;
+
+			// If true, can create annotations. If false, can only view.
+			case 'canAnnotate':
+				this.canAnnotate = value;
+				break;
+
 			// The default sheet (e.g. public or private)
 			case 'sheetDefault':
 				this.defaultSheet = value;

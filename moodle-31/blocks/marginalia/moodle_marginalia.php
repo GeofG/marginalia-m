@@ -101,12 +101,16 @@ abstract class mia_page_profile
 	protected $page_info;
 	public $moodlemia;
 	public $object_type;
+	private $no_splash;
+	protected $nameDisplay;
 	
-	public function __construct( $moodlemia, $page_info, $object_type )
+	public function __construct( $moodlemia, $page_info, $object_type, $no_splash )
 	{
 		$this->moodlemia = $moodlemia;
 		$this->page_info = $page_info;
 		$this->object_type = $object_type;
+		$this->no_splash = $no_splash;
+		$this->nameDisplay = "everyone";
 	}
 	
 	/**
@@ -243,7 +247,7 @@ abstract class mia_page_profile
 			AN_SPLASH_PREF => $this->moodlemia->get_pref( AN_SPLASH_PREF, 'true' )
 		);
 		
-		$showsplashpref = $prefs[ AN_SPLASH_PREF ];
+		$showsplashpref = $this->no_splash ? false : $prefs[ AN_SPLASH_PREF ];
 		
 		// Build a string of initial preference values for passing to Marginalia
 		$first = true;
@@ -296,6 +300,7 @@ abstract class mia_page_profile
 		$ssplash = 'true' == $showsplashpref ? "'".get_string('splash',ANNOTATION_STRINGS)."'" : 'null';
 		$sstrings = $this->moodlemia->strings_js( );
 		$pageName = $this->page_info->page;
+		$snameDisplay = json_encode($this->nameDisplay);
 		
 		return <<<SCRIPT
 	var moodleRoot = $swwwroot;
@@ -309,6 +314,7 @@ abstract class mia_page_profile
 			course: $scourseid,
 			allowAnyUserPatch: $sanypatch,
 			canAnnotate: $scanannotate,
+			nameDisplay: $snameDisplay,
 			smartquoteIcon: '$ssmartquoteicon',
 			sessionCookie: $ssessioncookie,
 			onKeyCreate: true,
@@ -403,8 +409,9 @@ SCRIPT;
 	
 	public function output_margin( )
 	{
+		$canannotate = $this->moodlemia->can_annotate( $refurl );
 		$output  = html_writer::tag('ol', '<li class="mia_dummyfirst"></li>',
-			array('class'=>'mia_margin'
+			array('class'=>'mia_margin'.($canannotate ? ' mia_annotatable' : '')
 				, 'style'=>'float:right;width:15em'
 				, 'title'=>get_string('create_margin', ANNOTATION_STRINGS)));
 		//$output .= html_writer::end_tag('ol');
@@ -464,10 +471,11 @@ class mia_profile_quiz_grading extends mia_page_profile
 	
 	public function __construct( $moodlemia, $page_info, $quiz, $slot)
 	{
-		parent::__construct( $moodlemia, $page_info, AN_OTYPE_QUIZ );
+		parent::__construct( $moodlemia, $page_info, AN_OTYPE_QUIZ, true );
 		$this->object_type = AN_OTYPE_QUIZ;
 		$this->quiz_id = $quiz;
 		$this->slot_id = $slot;
+		$this->nameDisplay = "quoteAuthors";
 	}
 	
 	public function emit_requires( )
@@ -497,9 +505,10 @@ class mia_profile_question_attempt extends mia_page_profile
 	// Had to reverse order of parameters because multiple IDs
 	public function __construct( $moodlemia, $page_info, $object_type, $attempt_id, $slot_id )
 	{
-		parent::__construct( $moodlemia, $page_info, $object_type );
+		parent::__construct( $moodlemia, $page_info, $object_type, true );
 		$this->attempt_id = $attempt_id;
 		$this->slot_id = $slot_id;
+		$this->nameDisplay = "quoteAuthors";
 	}
 	
 	public function emit_requires( )
@@ -806,6 +815,12 @@ class mia_page_info
 					$this->params['attempt'] = (int) $params['attempt'];
 					$this->params['slot'] = (int) $params['slot'];
 					break;
+				case 'comment.php':
+					$this->page = '/mod/quiz/comment';
+					$this->object_type = AN_OTYPE_ATTEMPT;
+					$this->params['attempt'] = (int) $params['attempt'];
+					$this->params['slot'] = (int) $params['slot'];
+					break;
 				default:
 					throw new Exception("Page URL unknown to Marginalia");
 			}
@@ -885,13 +900,16 @@ class moodle_marginalia
 				return new mia_profile_forum_compose( $this, $info );
 			// Quiz:
 			case '/mod/quiz/report':
+			case '/mod/quiz/review':	// Works for this too!
 				return new mia_profile_quiz_grading( $this, $info, 
 					(int) $params['id'], (int) $params['slot'] );
-			case '/mod/quiz/review':
+					/*
 				return new mia_profile_quiz_attempt( $this, $info,
 					AN_OTYPE_ATTEMPT, (int) $params[ 'attempt'], null );
 				break;
+			   */
 			case '/mod/quiz/reviewquestion':
+			case '/mod/quiz/comment':
 				return new mia_profile_question_attempt( $this, $info,
 					AN_OTYPE_ATTEMPT,
 					(int) $params[ 'attempt'], (int) $params[ 'slot' ] );
@@ -900,7 +918,7 @@ class moodle_marginalia
 			case '/course/view':
 				return new mia_profile_course( $this, $info, (int) $params[ 'id' ]);
 			default:
-				throw new Exception("Unable to identify page");
+				throw new Exception("Marginalia is unable to identify page");
 		}
 	}
 	
