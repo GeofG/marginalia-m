@@ -405,7 +405,7 @@ class AnnotationService
 			return;
 		}
 
-		$annotation = $this->doGetAnnotation( $id );
+		$annotation = $this->doGetAnnotation( $id, false );
 		if ( null === $annotation )
 			$this->httpError( 404, 'Not Found', 'No such annotation' );
 		elseif ( $this->currentUserId != $annotation->getUserId( ) && ! $this->allowAnyUserPatch )

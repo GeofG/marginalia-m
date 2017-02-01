@@ -38,7 +38,7 @@ function PostPageInfo( doc, selectors )
 {
 	this.doc = doc;
 	this.posts = new Array( );
-	this.postsById = new Object( );
+	//this.postsById = new Object( );
 	this.postsByUrl = new Object( );
 	this.selectors = selectors;
 	this.IndexPosts( doc.documentElement );
@@ -73,18 +73,20 @@ PostPageInfo.prototype.IndexPosts = function( root )
 		var postElement = posts[ i ];
 		var post = new PostMicro( this, postElement );
 		this.posts[ this.posts.length ] = post;
-		if ( null != post.getId( ) && '' != post.getId( ) )
-			this.postsById[ posts[ i ].id ] = post;
+		//if ( null != post.getId( ) && '' != post.getId( ) )
+		//	this.postsById[ posts[ i ].id ] = post;
 		if ( null != post.getUrl( ) && '' != post.getUrl( ) )
 			this.postsByUrl[ post.getUrl( ) ] = post;
 		postElement[ Marginalia.F_POST ] = post;
 	}
 }
 
+/*
 PostPageInfo.prototype.getPostById = function( id )
 {
 	return this.postsById[ id ];
 }
+*/
 
 /**
  * Get a post that is the parent of a given element
@@ -217,6 +219,7 @@ PostMicro.prototype.getDate = function( )
 	return this._date;
 }
 
+/*
 PostMicro.prototype.getId = function( )
 {
 	if ( ! this._fetchedId )
@@ -225,14 +228,17 @@ PostMicro.prototype.getId = function( )
 	}
 	return this._id;
 }
+*/
 
 PostMicro.prototype.getUrl = function( baseUrl )
 {
 	if ( ! this._fetchedUrl )
 	{
 		// The node containing the url
-		if ( this.postInfo.selectors[ 'post_url' ] )
+		if ( this.postInfo.selectors[ 'post_url' ] ) {
 			this._url = this.postInfo.selectors[ 'post_url' ].value( this._element );
+			console.log("PostMicro.getUrl -> " + this._url);
+		}
 		// Otherwise grab the request url, but strip it of any fragment identifier
 		else
 		{

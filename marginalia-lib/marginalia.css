@@ -67,6 +67,9 @@ em.mia_annotation sup a {
  * Annotation margin notes
  */
 
+.mia_annotated .ablock {
+	position: relative;
+}
 .mia_margin ol {
 	list-style-type: none;
 	margin: 0;

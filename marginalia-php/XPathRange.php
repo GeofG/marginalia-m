@@ -169,7 +169,7 @@ class XPathPoint
 	 *  following-sibling::p
 	 *  p[@attribute='value']
 	 */
-	function isXPathSafe( $xpath )
+	static function isXPathSafe( $xpath )
 	{
 		if ( '' == $xpath )
 			return true;

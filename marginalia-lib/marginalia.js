@@ -64,6 +64,8 @@ function Marginalia( service, loginUserId, sheet, features )
 	this.serviceErrorCallback = Marginalia.defaultErrorCallback;
 	this.enableRecentFlag = false;
 	this.lastUpdate = null;
+	this.canAnnotate = true;
+	this.nameDisplay = "everyone";
 	
 	this.selectors = {
 		post: new Selector( '.hentry', '.hentry .hentry' ),
@@ -98,6 +100,16 @@ function Marginalia( service, loginUserId, sheet, features )
 		var value = features[ feature ];
 		switch ( feature )
 		{
+			// If true, user names are not shown next to annotations
+			case 'nameDisplay':
+				this.nameDisplay = value;
+				break;
+
+			// If true, can create annotations. If false, can only view.
+			case 'canAnnotate':
+				this.canAnnotate = value;
+				break;
+
 			// The default sheet (e.g. public or private)
 			case 'sheetDefault':
 				this.defaultSheet = value;
@@ -1172,9 +1184,9 @@ function _keyupCreateAnnotation( event )
 		if ( 13 == event.keyCode )
 		{
 			// Find the post
-			var textRange = marginalia.cachedSelection;
-			if ( ! textRange )
-				textRange = marginalia.getSelection( );
+			// Don't use cached selection; it won't have been set,
+			// as that only happens when clicking in the margin.
+			var textRange = marginalia.getSelection( );
 			var post = marginalia.posts.getPostByElement( textRange.startContainer );
 			if ( null == post )
 				return false;
@@ -1312,7 +1324,9 @@ function _skipAnnotationActions( node )
 /*
  * Handler for standard createAnnotation button
  * Application may choose to do things otherwise (e.g. for edit actions)
- */
+ *
+ * No longer used. Which means (so far as I can tell) post.id is no
+ * longer used. Which is great.
 function clickCreateAnnotation( event, id, editor )
 {
 	// This might be called from a handler not set up by addEvent,
@@ -1322,6 +1336,7 @@ function clickCreateAnnotation( event, id, editor )
 	post = marginalia.listPosts( ).getPostById( id );
 	createAnnotation( post, true, editor );
 }
+*/
 
 
 Marginalia.prototype.getSelection = function( warn )
@@ -1410,6 +1425,7 @@ function createAnnotation( post, warn, editor )
 		quoteAuthorName: post.getAuthorName( ),
 		sheet: marginalia.sheet
 	} );
+	console.log("Create annotation for url " + annotation.getUrl());
 	
 	var wordRange = WordRange.fromTextRange( textRange, contentElement, marginalia.skipContent );
 	var sequenceRange = wordRange.toSequenceRange( contentElement );

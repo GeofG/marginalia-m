@@ -83,7 +83,6 @@ class moodle_annotation_service extends AnnotationService
 			$cm = get_coursemodule_from_instance( $handler->modulename, $handler->modinstanceid, $handler->courseid);
 			if ( $cm )
 			{
-				echo "Got course module.";
 				$modcontext = context_module::instance( $cm->id );
 				if ( ! $handler->capannotate )
 				{
@@ -92,7 +91,6 @@ class moodle_annotation_service extends AnnotationService
 					return false;	// annotation of this resource is never permitted
 				}
 				else {
-					echo "See what moodle says.";
 					return has_capability($handler->capannotate, $modcontext);
 				}
 			}

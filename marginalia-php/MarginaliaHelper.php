@@ -45,7 +45,7 @@ class MarginaliaHelper
 	 * Different implementations may have different annotation objects.  All should
 	 * be compatible with this code if they have the appropriate getters and setters.
 	 */
-	function annotationFromParams( &$annotation, &$params )
+	static function annotationFromParams( &$annotation, &$params )
 	{
 		// ID
 		// must be setAnnotationId, not setId, because of a conflict with a base class method in OJS
@@ -171,21 +171,21 @@ class MarginaliaHelper
 		{
 			$created = $params[ 'created' ];
 			// TODO: verify date format
-			$this->setCreated( $created );
+			$annotation->setCreated( $created );
 		}
 			
 		// Modified
 		if ( array_key_exists( 'modified', $params ) )
 		{
 			$modified = $params[ 'modified' ];
-			$this->setModified( $modified );
+			$annotation->setModified( $modified );
 		}
 		
 		// Version
 		if ( array_key_exists( 'version', $params ) )
 		{
 			$version = $params[ 'version' ];
-			$this->setVersion( $version );
+			$annotation->setVersion( $version );
 		}
 		
 		// Ok, I know in PHP it's traditional to return True for success,
@@ -195,7 +195,7 @@ class MarginaliaHelper
 		return 0;
 	}
 	
-	function generateAnnotationFeed( &$annotations, $feedTagUri, $feedLastModified, $servicePath, $tagHost, $feedUrl, $baseUrl='' )
+	static function generateAnnotationFeed( &$annotations, $feedTagUri, $feedLastModified, $servicePath, $tagHost, $feedUrl, $baseUrl='' )
 	{
 		$NS_PTR = 'http://www.geof.net/code/annotation/';
 		$NS_ATOM = 'http://www.w3.org/2005/Atom';
@@ -241,7 +241,7 @@ class MarginaliaHelper
 	 * Logically this is part of the Annotation class, but different applications implement
 	 * that differently (OJS in particular), so it's here, but called through Annotation->toAtom().
 	 */
-	function annotationToAtom( &$annotation, $tagHost, $servicePath, $strippedRoot='' )
+	static function annotationToAtom( &$annotation, $tagHost, $servicePath, $strippedRoot='' )
 	{
 		$NS_XHTML = 'http://www.w3.org/1999/xhtml';
 	
@@ -362,7 +362,7 @@ class MarginaliaHelper
 	 * Get the most recent date on which an annotation was modified
 	 * Used for feed last modified dates
 	 */
-	function getLastModified( $annotations, $installDate )
+	static function getLastModified( $annotations, $installDate )
 	{
 		// Get the last modification time of the feed
 		$lastModified = $installDate;
@@ -386,7 +386,7 @@ class MarginaliaHelper
 	 * speed up the client display.  However, the client may still have to deal with overlapping infos.
 	 * Modifies the passed infos and returns them.
 	 */
-	function mergeRangeInfos( &$infos )
+	static function mergeRangeInfos( &$infos )
 	{
 		// Make sure the blocks are sorted
 		usort( $infos, 'rangeInfoCompare' );
@@ -424,7 +424,7 @@ class MarginaliaHelper
 	 * TODO: include block path, thusly:
 	 *   geof fred john /5 p[5]
 	 */
-	function getRangeInfoXml( $infos )
+	static function getRangeInfoXml( $infos )
 	{
 		$s = "<range-infos>\n";
 		for ( $i = 0;  $i < count( $infos );  ++$i )
@@ -439,7 +439,7 @@ class MarginaliaHelper
 	/** Convert a list of annotations to a list of RangeInfo records
 	 * These will have a 1-to-1 correspondence, they should then be merged
 	 * using calculateBlockOverlaps */
-	function annotationsToRangeInfos( $annotations )
+	static function annotationsToRangeInfos( $annotations )
 	{
 		$infos = array();
 		foreach ( $annotations as $annotation )
@@ -451,7 +451,7 @@ class MarginaliaHelper
 		return $infos;
 	}
 
-	function httpResultCodeForError( $error )
+	static function httpResultCodeForError( $error )
 	{
 		switch ( $error )
 		{
@@ -469,7 +469,7 @@ class MarginaliaHelper
 	 * Check whether an untrusted URL is safe for insertion in a page
 	 * In particular, javascript: urls can be used for XSS attacks
 	 */
-	function isUrlSafe( $url )
+	static function isUrlSafe( $url )
 	{
 		$urlParts = parse_url( $url );
 		if ( False === $urlParts )
@@ -487,13 +487,13 @@ class MarginaliaHelper
 	}
 
 	// OJS needs to replace this with its own version:
-	function getQueryParam( $name, $default )
+	static function getQueryParam( $name, $default )
 	{
 		return array_key_exists( $name, $_GET ) ? MarginaliaHelper::unfix_quotes( $_GET[ $name ] ) : $default;
 	}
 	
 	// forceStrip - always strip slashes, regardless of PHP setting (needed for Moodle)
-	function listBodyParams( $forceStrip=false )
+	static function listBodyParams( $forceStrip=false )
 	{
 		$method = $_SERVER[ 'REQUEST_METHOD' ];
 		if ( 'POST' == $method )
@@ -535,13 +535,13 @@ class MarginaliaHelper
 	}
 
 	// Yeah, gotta love the mess that is PHP
-	function unfix_quotes( $value )
+	static function unfix_quotes( $value )
 	{
 		return get_magic_quotes_gpc( ) ? stripslashes( $value ) : $value;
 	}
 	
 	// It sure doesn't hurt to make sure that numbers are really numbers.
-	function isnum( $field )
+	static function isnum( $field )
 	{
 		return strspn( $field, '0123456789' ) == strlen( $field );
 	}

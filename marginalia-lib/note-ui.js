@@ -58,28 +58,32 @@ PostMicro.prototype.getNotesElement = function( marginalia )
 
 PostMicro.prototype.initMargin = function( marginalia )
 {
-	var margin = marginalia.selectors[ 'mia_notes' ].node( this.getElement( ) );
+	if ( marginalia.canAnnotate )
+	{
+		var margin = marginalia.selectors[ 'mia_notes' ].node( this.getElement( ) );
+		$(margin).addClass( 'annotatable' );
 
-	//var postId = this.getElement();
-//	var margin = this.getNotesElement( marginalia );
-	margin.onmousedown = function( ) {
-		marginalia.cachedSelection = marginalia.getSelection( );
-//		trace( null, 'cache selection: ' + marginalia.cachedSelection );
-	};
-	var post = this;
-	margin.onclick = function( event ) {
-		event = domutil.getEvent( event );
-		// only create an annotation if a) this click was on the margin itself,
-		// note a child node, and b) there is no edit in progress
-		if ( ! marginalia.noteEditor && domutil.getEventTarget( event ) == margin )
-		{
-//			trace( null, 'clicked' );
-			createAnnotation( post );
-			domutil.stopPropagation( event );
-		}
-//		trace( null, 'clear selection cache' );
-		marginalia.cachedSelection = null;
-	};
+		//var postId = this.getElement();
+	//	var margin = this.getNotesElement( marginalia );
+		margin.onmousedown = function( ) {
+			marginalia.cachedSelection = marginalia.getSelection( );
+			//console.log( 'cache selection: ' + marginalia.cachedSelection );
+		};
+		var post = this;
+		margin.onclick = function( event ) {
+			event = domutil.getEvent( event );
+			// only create an annotation if a) this click was on the margin itself,
+			// note a child node, and b) there is no edit in progress
+			if ( ! marginalia.noteEditor && domutil.getEventTarget( event ) == margin )
+			{
+	//			trace( null, 'clicked' );
+				createAnnotation( post );
+				domutil.stopPropagation( event );
+			}
+	//		trace( null, 'clear selection cache' );
+			marginalia.cachedSelection = null;
+		};
+	}
 }
 
 
@@ -473,10 +477,14 @@ Marginalia.defaultDisplayNote = function( marginalia, annotation, noteElement, p
 		// The space is not part of the note, nor is it part of the username.  This is important so
 		// that it doesn't get underlined or otherwise styled with the username.
 		noteText.insertBefore( document.createTextNode( ' ' ), noteText.firstChild );
-		noteText.insertBefore( domutil.element( 'span', {
-			className:  Marginalia.C_USERNAME,
-			title:  titleText,
-			content:  username + ':' } ), noteText.firstChild );
+		if ( marginalia.nameDisplay == "everyone" 
+			|| marginalia.nameDisplay == "quoteAuthors" && marginalia.canAnnotate )
+		{
+			noteText.insertBefore( domutil.element( 'span', {
+				className:  Marginalia.C_USERNAME,
+				title:  titleText,
+				content:  username + ':' } ), noteText.firstChild );
+		}
 	}
 	noteElement.appendChild( noteText );
 	
