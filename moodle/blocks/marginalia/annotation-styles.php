@@ -175,6 +175,15 @@ body.mia_annotated button#hide-all-annotations {
 	display: inline;
 }
 
+.mia_annotated .essay .answer .qtype_essay_response {
+	margin-right: 17.2em;
+}
+.mia_annotated .essay .answer .mia_margin {
+	position: absolute;
+	top: 0;
+	right: 0;
+	box-sizing: border-box;
+}
 @media print
 {
 	.forumpost em.mia_annotation {

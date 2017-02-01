@@ -44,7 +44,6 @@ function MoodleMarginalia( annotationPath, url, moodleRoot, userId, prefs, param
 	this.allowAnyUserPatch = params.allowAnyUserPatch;
 	this.smartquoteIcon = params.smartquoteIcon;
 	this.handlers = params.handlers;
-	this.course = params.course;
 	this.smartquoteService = params.smartquoteService;
 	this.canAnnotate = params.canAnnotate;
 	this.nameDisplay = params.nameDisplay;

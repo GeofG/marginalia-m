@@ -233,7 +233,7 @@ abstract class mia_page_profile
 	 */
 	public function margin_js( )
 	{
-		global $CFG, $USER, $PAGE, $course;
+		global $CFG, $USER, $PAGE;
 		
 		$refurl = $this->get_refurl( );
 		
@@ -289,7 +289,6 @@ abstract class mia_page_profile
 		$suserid = json_encode($USER->id);
 		$srefurl = json_encode($refurl);
 		$slogger = $this->moodlemia->logger && $this->moodlemia->logger->is_active() ? 'true' : 'false';
-		$scourseid = (int)$course->id;
 		$sanypatch = $allowAnyUserPatch ? 'true' : 'false';
 		$scanannotate = $canannotate ? 'true' : 'false';
 		$susesmartquote = AN_USESMARTQUOTE ? 'true' : 'false';
@@ -311,7 +310,6 @@ abstract class mia_page_profile
 		annotationPath, url, moodleRoot, userId, $sprefs, {
 			useSmartquote: $susesmartquote,
 			useLog: '$slogger',
-			course: $scourseid,
 			allowAnyUserPatch: $sanypatch,
 			canAnnotate: $scanannotate,
 			nameDisplay: $snameDisplay,
@@ -469,12 +467,10 @@ class mia_profile_quiz_grading extends mia_page_profile
 	public $quiz_id;
 	public $slot_id = null;
 	
-	public function __construct( $moodlemia, $page_info, $quiz, $slot)
+	public function __construct( $moodlemia, $page_info)
 	{
 		parent::__construct( $moodlemia, $page_info, AN_OTYPE_QUIZ, true );
 		$this->object_type = AN_OTYPE_QUIZ;
-		$this->quiz_id = $quiz;
-		$this->slot_id = $slot;
 		$this->nameDisplay = "quoteAuthors";
 	}
 	
@@ -901,13 +897,7 @@ class moodle_marginalia
 			// Quiz:
 			case '/mod/quiz/report':
 			case '/mod/quiz/review':	// Works for this too!
-				return new mia_profile_quiz_grading( $this, $info, 
-					(int) $params['id'], (int) $params['slot'] );
-					/*
-				return new mia_profile_quiz_attempt( $this, $info,
-					AN_OTYPE_ATTEMPT, (int) $params[ 'attempt'], null );
-				break;
-			   */
+				return new mia_profile_quiz_grading( $this, $info );
 			case '/mod/quiz/reviewquestion':
 			case '/mod/quiz/comment':
 				return new mia_profile_question_attempt( $this, $info,
