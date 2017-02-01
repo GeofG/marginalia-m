@@ -316,7 +316,7 @@ class annotation_summary_query
 		// If the all flag is set, see if this is an admin user with permission to
 		// export all annotations.
 		elseif ( $this->all )  {
-			$sitecontext = get_context_instance( CONTEXT_SYSTEM );
+			$sitecontext = context_system::instance( );
 			if ( has_capability( 'blocks/marginalia:view_all', $sitecontext ) )
 				$query = '1=1';
 		}
@@ -360,7 +360,7 @@ class annotation_summary_query
 		}
 		
 		// These are the fields to use for a search;  specific annotations may add more fields
-		$stdsearchfields = array( 'a.note', 'a.quote', 'u.firstname', 'u.lastname' );
+		$stdsearchfields = array( 'a.note', 'a.quote', 'u.firstname', 'u.lastname', 'u.firstnamephonetic', 'lastnamephonetic', 'middlename', 'alternatename' );
 
 		// Searching limits also;  fields searched are not alone those of the annotation:
 		// add to them also those a page of this type might use.
@@ -428,11 +428,20 @@ class annotation_summary_query
 			. ", r.lastread AS lastread"
 			. ", u.username AS username"
 			. ",\n u.firstname AS firstname, u.lastname AS lastname"
+			. ",\n u.firstnamephonetic AS firstnamephonetic"
+			. ",\n u.lastnamephonetic AS lastnamephonetic"
+			. ",\n u.middlename AS middlename"
+			. ",\n u.alternatename AS alternatename" 
 	//		. ",\n concat(u.firstname, ' ', u.lastname) AS fullname"
 			. ",\n ".$DB->sql_concat(':note_author_url_base','u.id')." AS note_author_url"
 			. ",\n qu.username AS quote_author_username"
 			. ",\n qu.id AS quote_author_id"
-			. ",\n qu.firstname as quote_author_firstname, qu.lastname AS quote_author_lastname"
+			. ",\n qu.firstname as quote_author_firstname"
+			. ",\n qu.lastname AS quote_author_lastname"
+			. ",\n qu.firstnamephonetic AS quote_author_firstnamephonetic"
+			. ",\n qu.lastnamephonetic AS quote_author_lastnamephonetic"
+			. ",\n qu.middlename AS quote_author_middlename"
+			. ",\n qu.alternatename AS quote_author_alternatename" 
 	//		. ",\n concat(qu.firstname, ' ', qu.lastname) AS quote_author_fullname"
 			. ",\n ".$DB->sql_concat(':quote_author_url_base', 'qu.id')." AS quote_author_url";
 		/*

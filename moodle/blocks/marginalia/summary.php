@@ -69,7 +69,7 @@ class annotation_summary_page
 		// a block on the side of the screen.  So we're forced to use CONTEXT_SYSTEM.
 		// Bleargh.
 		//$block = $DB->get_record( 'block_instances', array( 'blockname' => 'block_marginalia' ) );
-		$PAGE->set_context( get_context_instance( CONTEXT_SYSTEM ) );
+		$PAGE->set_context( context_system::instance( ) );
 
 		if ($CFG->forcelogin) {
 			require_login();
@@ -228,7 +228,7 @@ class annotation_summary_page
 				.get_string( 'summary_range_error', ANNOTATION_STRINGS )."</p>\n";
 		}
 		
-		$a = new object( );
+		$a = new stdClass( );
 		$a->n = $annotations ? count( $annotations ) : 0;
 		$a->m = $annotation_count;
 		echo '<p id="query">'.get_string( 'prompt_search_desc', ANNOTATION_STRINGS, $a )
@@ -305,7 +305,13 @@ class annotation_summary_page
 					echo "<th rowspan='$nrows'>";
 					$url = MarginaliaHelper::isUrlSafe( $url ) ? $url : '';
 					$a->row_type = $annotation->row_type;
-					$a->author = $this->moodlemia->fullname2( $annotation->quote_author_firstname, $annotation->quote_author_lastname );
+					$a->author = $this->moodlemia->fullname2(
+						$annotation->quote_author_firstname,
+						$annotation->quote_author_lastname,
+						$annotation->quote_author_firstnamephonetic,
+						$annotation->quote_author_lastnamephonetic,
+						$annotation->quote_author_middlename,
+						$annotation->quote_author_alternatename);
 					echo "<a class='url' href='".s($url)."' title='".get_string( 'prompt_row', ANNOTATION_STRINGS, $a)."'>";
 					echo s( $annotation->quote_title ) . '</a>';
 
@@ -316,7 +322,13 @@ class annotation_summary_page
 					if ( ! $this->summary->ofuser || $annotation->quote_author_username != $this->summary->ofuser->username )  {
 						$tsummary = $this->summary->derive( array( 'ofuserid' => $annotation->quote_author_id ) );
 						$turl = $tsummary->summary_url( );
-						$a->fullname = $this->moodlemia->fullname2( $annotation->quote_author_firstname, $annotation->quote_author_lastname );
+						$a->fullname = $this->moodlemia->fullname2(
+							$annotation->quote_author_firstname,
+							$annotation->quote_author_lastname,
+							$annotation->quote_author_firstnamephonetic,
+							$annotation->quote_author_lastnamephonetic,
+							$annotation->quote_author_middlename,
+							$annotation->quote_author_alternatename);
 						echo $this->zoom_link( $tsummary->summary_url( ), get_string( 'zoom_author_hover', ANNOTATION_STRINGS, $a) );
 					}
 					echo "</th>\n";
@@ -369,7 +381,11 @@ class annotation_summary_page
 				}
 				
 				// User name (or "me" for current user)
-				$displayusername = s( $this->moodlemia->fullname2( $annotation->firstname, $annotation->lastname ) );
+				$displayusername = s( $this->moodlemia->fullname2(
+					$annotation->firstname, $annotation->lastname,
+					$annotation->firstnamephonetic, $annotation->lastnamephonetic,
+					$annotation->middlename, $annotation->alternatename ) );
+
 				$hiddenusername = '';
 				$class = 'user-name';
 				
@@ -391,7 +407,10 @@ class annotation_summary_page
 				if ( ! $this->summary->user || $annotation->userid != $this->summary->user->username )  {
 					$tsummary = $this->summary->derive( array( 'userid' => $annotation->userid) );
 					$turl = $tsummary->summary_url( );
-					$a->fullname = $this->moodlemia->fullname2( $annotation->firstname, $annotation->lastname );
+					$a->fullname = $this->moodlemia->fullname2(
+						$annotation->firstname, $annotation->lastname,
+						$annotation->firstnamephonetic, $annotation->lastnamephonetic,
+						$annotation->middlename, $annotation->alternatename ) );
 					echo $this->zoom_link( $tsummary->summary_url( ), get_string( 'zoom_user_hover', ANNOTATION_STRINGS, $a) );
 				}
 				echo "</td>\n";

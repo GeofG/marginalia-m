@@ -84,7 +84,7 @@ class moodle_annotation_service extends AnnotationService
 			if ( $cm )
 			{
 				echo "Got course module.";
-				$modcontext = get_context_instance( CONTEXT_MODULE, $cm->id );
+				$modcontext = context_module::instance( $cm->id );
 				if ( ! $handler->capannotate )
 				{
 					echo "No capability";
@@ -163,10 +163,12 @@ class moodle_annotation_service extends AnnotationService
 		{
 			$queryparams = array( );
 			$querysql = $summary->sql( $queryparams );
-			//echo "QUERY: <pre>$querysql</pre>\n";
-			//echo "PARAMS: \n";
-			//foreach ( $queryparams as $key => $value )
-			//	echo "  $key => $value\n";
+/*
+			echo "QUERY: <pre>$querysql</pre>\n";
+			echo "PARAMS: \n";
+			foreach ( $queryparams as $key => $value )
+				echo "  $key => $value\n";
+*/
 			$annotations = Array( );
 			$annotations_read = Array( );
 			$annotations_unread = Array( );
@@ -339,7 +341,7 @@ class moodle_annotation_service extends AnnotationService
 				// Record that this user has read the annotation.
 				// This may be superfluous, as the read flag is not shown for the current user,
 				// but for consistency it seems like a good idea.
-				$record = new object( );
+				$record = new stdClass( );
 				$record->annotationid = $id;
 				$record->userid = $USER->id;
 				$record->firstread = $time;

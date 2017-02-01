@@ -22,7 +22,7 @@ $lang = current_language( );
 
 $PAGE->set_url( '/blocks/marginalia/help.php' );
 $PAGE->set_pagelayout( 'popup' );
-$PAGE->set_context( get_context_instance( CONTEXT_SYSTEM ) );
+$PAGE->set_context( context_system::instance( ) );
 $PAGE->requires->css( '/blocks/marginalia/help.css' );
 	
 echo $OUTPUT->header( );

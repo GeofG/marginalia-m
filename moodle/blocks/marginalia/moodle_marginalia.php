@@ -267,7 +267,7 @@ abstract class mia_page_profile
 		$summaryurl = ANNOTATION_PATH.'/summary.php?user='.(int)$USER->id.'&url='.urlencode( $refurl );
 		$helpurl = ANNOTATION_PATH.'/help.php?component=block_marginalia&topic=annotate';
 		
-		$sitecontext = get_context_instance(CONTEXT_SYSTEM);
+		$sitecontext = context_system::instance( );
 		$allowAnyUserPatch = AN_ADMINUPDATE && (
 			has_capability( 'block/marginalia:fix_notes', $sitecontext ) );
 		
@@ -407,6 +407,7 @@ SCRIPT;
 	
 	public function output_margin( )
 	{
+		$refurl = $this->get_refurl( );
 		$canannotate = $this->moodlemia->can_annotate( $refurl );
 		$output  = html_writer::tag('ol', '<li class="mia_dummyfirst"></li>',
 			array('class'=>'mia_margin'.($canannotate ? ' mia_annotatable' : '')
@@ -454,7 +455,7 @@ class mia_profile_course extends mia_page_profile
 
 	public function __construct( $moodlemia, $page_info, $course_id )
 	{
-		parent::__construct( $moodlemia, $page_info, AN_OTYPE_COURSE );
+		parent::__construct( $moodlemia, $page_info, AN_OTYPE_COURSE, false );
 		$this->object_id = $course_id;
 	}
 
@@ -583,7 +584,7 @@ class mia_profile_forum_display extends mia_page_profile
 	
 	public function __construct( $moodlemia, $page_info, $object_type, $object_id )
 	{
-		parent::__construct( $moodlemia, $page_info, $object_type );
+		parent::__construct( $moodlemia, $page_info, $object_type, false );
 		$this->object_id = $object_id;
 	}
 	
@@ -663,7 +664,7 @@ class mia_profile_forum_compose extends mia_page_profile
 	
 	public function __construct( $moodlemia, $page_info )
 	{
-		parent::__construct( $moodlemia, $page_info, AN_OTYPE_POST );
+		parent::__construct( $moodlemia, $page_info, AN_OTYPE_POST, false );
 		$this->replypostid = optional_param('reply', 0, PARAM_INT);
 	}
 	
@@ -706,7 +707,7 @@ class mia_profile_js extends mia_page_profile
 	
 	public function __construct( $moodlemia )
 	{
-		parent::__construct( $moodlemia, null, AN_OTYPE_NONE );
+		parent::__construct( $moodlemia, null, AN_OTYPE_NONE, true );
 	}
 	
 	public function get_refurl( )
@@ -946,18 +947,23 @@ class moodle_marginalia
 			return 'NONE';
 		if ( ! $this->viewfullnames_set )
 		{
-			$context = get_context_instance( CONTEXT_SYSTEM );
+			$context = context_system::instance( );
 			$this->viewfullnames = has_capability( 'moodle/site:viewfullnames', $context );
 			$this->viewfullnames_set = True;
 		}
 		return fullname( $user, $this->viewfullnames );
 	}
 	
-	function fullname2( $firstname, $lastname )
+	/* Ugly as sin because Moodle originally just wanted firstname, lastname */
+	function fullname2( $firstname, $lastname, $firstnamephonetic, $lastnamephonetic, $middlename, $alternatename )
 	{
-		$u = new object();
+		$u = new stdClass();
 		$u->firstname = $firstname;
 		$u->lastname = $lastname;
+		$u->firstnamephonetic = $firstnamephonetic;
+		$u->lastnamephonetic = $lastnamephonetic;
+		$u->middlename = $middlename;
+		$u->alternatename = $alternatename;
 		return $this->fullname($u);
 	}
 	
@@ -1060,7 +1066,9 @@ class moodle_marginalia
 		if ( array_key_exists( 'userid', $r ) )
 			$annotation->setUserId( $r->userid );
 		if ( array_key_exists( 'firstname', $r ) )
-			$annotation->setUserName( $this->fullname2( $r->firstname, $r->lastname ) );
+			$annotation->setUserName( $this->fullname2( $r->firstname, $r->lastname,
+				$r->firstnamephonetic, $r->lastnamephonetic,
+			   	$r->middlename, $r->alternatename ) );
 		
 		if ( array_key_exists( 'sheet_type', $r ) )
 			$annotation->setSheet( $this->sheet_str( $r->sheet_type ) );
@@ -1077,7 +1085,10 @@ class moodle_marginalia
 		elseif ( array_key_exists( 'quote_author', $r ) )	// to support old mdl_annotation table
 			$annotation->setQuoteAuthorId( $r->quote_author );
 		if ( array_key_exists( 'quote_author_firstname', $r ) )
-			$annotation->setQuoteAuthorName( $this->fullname2( $r->quote_author_firstname, $r->quote_author_lastname ) );
+			$annotation->setQuoteAuthorName( $this->fullname2( 
+				$r->quote_author_firstname, $r->quote_author_lastname,
+				$r->quote_author_firstnamephonetic, $r->quote_author_lastnamephonetic,
+				$r->middlename, $r->alternatename ) );
 		if ( array_key_exists( 'link', $r ) )
 			$annotation->setLink( $r->link );
 		if ( array_key_exists( 'link_title', $r ) )
@@ -1123,7 +1134,7 @@ class moodle_marginalia
 	{
 		global $DB;
 		
-		$record = new object();
+		$record = new stdClass();
 		
 		$id = $annotation->getAnnotationId( );
 		if ( $id )
@@ -1261,7 +1272,7 @@ class moodle_marginalia
 			$cm = get_coursemodule_from_instance( $handler->modulename, $handler->modinstanceid, $handler->courseid);
 			if ( $cm )
 			{
-				$modcontext = get_context_instance( CONTEXT_MODULE, $cm->id, $USER );
+				$modcontext = context_module::instance( $cm->id, $USER );
 //				if ( has_capability('moodle/legacy:guest', $context, $USER->id, false ) )
 //					return false;
 				if ( ! $handler->capannotate )
@@ -1274,7 +1285,7 @@ class moodle_marginalia
 		}
 		else
 		{
-			$modcontext = context_system::instance();
+			$modcontext = context_system::instance( );
 			return has_capability( $handler->capannotate, $modcontext, $USER );
 		}
 	}	
