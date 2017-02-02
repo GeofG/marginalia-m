@@ -494,6 +494,93 @@ class mia_profile_quiz_grading extends mia_page_profile
 	}
 }
 
+class mia_profile_quiz_attempt extends mia_page_profile
+{
+	public $quiza_id = null;
+	public $slot_id = null;
+	
+	// Had to reverse order of parameters because multiple IDs
+	public function __construct( $moodlemia, $page_info, $quiza_id, $slot_id )
+	{
+		parent::__construct( $moodlemia, $page_info, AN_OTYPE_ATTEMPT, true );
+		$this->quiza_id = $quiza_id;
+		$this->slot_id = $slot_id;
+		$this->nameDisplay = "quoteAuthors";
+	}
+	
+	public function emit_requires( )
+	{
+		$this->emit_requires_annotate( );
+		$this->moodlemia->emit_plugin_requires( );
+	}
+	
+	public function emit_body( )
+	{
+		$s = $this->margin_js( );
+		$this->emit_init_js( $s );
+		$this->moodlemia->emit_plugin_body( );
+	}
+	
+	public function get_object_id( )
+	{
+		if ( ! $this->slot_id )
+			throw "Quiz attempt must specify slot";
+		// Find question attempt step ID, which is a single number identifying
+		// the annotated text.
+		$query = "SELECT qas.id AS 'id' "
+			. " FROM {question_attempt_step_data} qasd "
+			. " JOIN {question_attempt_steps} qas ON qasd.attemptstepid=qas.id "
+			. " JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
+			. " JOIN {question_usage} quba ON quba.id=qa.questionusageid "
+			. " JOIN {quiz_attempts} quiza ON quiza.uniqueid=quba.id "
+			// Want only maximum step value
+			. " LEFT OUTER JOIN {question_attempt_steps} qas2 ON qas.id=qas2.id "
+			. "  AND qas.sequencenumber < qas2.sequencenumber "
+			. " WHERE qa.slot=:slot AND quiza.id=:quiza_id "
+			. "  AND qasd.name='answer' "
+			. "  AND qas2.id IS NULL";	// <- filter outer join for maximum step value
+		$resultset = $DB->get_record_sql( $query,
+			array( 'quiza_id' => $this->quiza_id,
+				   'slot' => $this->slot_id ));
+		return ( $resultset && count( $resultset ) != 0 ) 
+			? $resultset->id : null;
+	}
+
+	/** Get data about annotated document (attempt): author, title, and course id */
+	public function get_create_data( $annotation_record )
+	{
+		global $DB;
+
+		$query = "SELECT qas.id AS object_id, quiz.course as course, "
+			." quiza.userid as quote_author_id, q.name as quote_title "
+			." FROM {question_attempt_step_data} qasd "
+			." JOIN {question_attempt_steps} qas ON qasd.attemptstepid=qas.id "
+			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
+			." JOIN {question_usages} quba ON quba.id=qa.questionusageid "
+			." JOIN {quiz_attempts} quiza ON quiza.uniqueid=quba.id "
+			." JOIN {quiz_slots} slots ON slots.slot=qa.slot "
+			." JOIN {question} q ON q.id=slots.questionid "
+			." JOIN {quiz} quiz ON quiza.quiz=quiz.id AND quiz.id=slots.quizid "
+			// Want only maximum step value
+			." LEFT OUTER JOIN {question_attempt_steps} qas2 ON qas.id=qas2.id "
+			."  AND qas.sequencenumber < qas2.sequencenumber "
+			." WHERE qa.slot=:slot AND quiza.id=:quiza_id "
+			."  AND qasd.name='answer' "
+			."  AND qas2.id IS NULL";	// <- filter outer join for maximum step value
+		$resultset = $DB->get_record_sql( $query,
+			array( 'slot' => $this->slot_id, 'quiza_id' => $this->quiza_id ) );
+		if ( $resultset && count ( $resultset ) != 0 )  {
+			$annotation_record->object_type = AN_OTYPE_ATTEMPT;
+			$annotation_record->object_id = (int) $resultset->object_id;
+			$annotation_record->quote_author_id = (int)$resultset->quote_author_id;
+			$annotation_record->quote_title = $resultset->quote_title;
+			$annotation_record->course = (int) $resultset->course;
+			return true;
+		}
+		return false;
+	}
+}
+
 class mia_profile_question_attempt extends mia_page_profile
 {
 	public $attempt_id = null;
@@ -524,21 +611,23 @@ class mia_profile_question_attempt extends mia_page_profile
 	public function get_object_id( )
 	{
 		if ( ! $this->slot_id )
-			throw "Quiz attempt must specify slot";
+			throw "Question attempt must specify slot";
 		// Find question attempt step ID, which is a single number identifying
 		// the annotated text.
 		$query = "SELECT qas.id AS 'id' "
 			. " FROM {question_attempt_step_data} qasd "
 			. " JOIN {question_attempt_steps} qas ON qasd.attemptstepid=qas.id "
 			. " JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
+			. " JOIN {question_usage} quba ON quba.id=qa.questionusageid "
+			. " JOIN {quiz_attempts} quiza ON quiza.uniqueid=quba.id "
 			// Want only maximum step value
 			. " LEFT OUTER JOIN {question_attempt_steps} qas2 ON qas.id=qas2.id "
 			. "  AND qas.sequencenumber < qas2.sequencenumber "
-			. " WHERE qa.slot=:slot AND qa.questionusageid=:attempt "
+			. " WHERE qa.slot=:slot AND quba.id=:attempt_id "
 			. "  AND qasd.name='answer' "
 			. "  AND qas2.id IS NULL";	// <- filter outer join for maximum step value
 		$resultset = $DB->get_record_sql( $query,
-			array( 'attempt' => $this->attempt_id,
+			array( 'attempt_id' => $this->attempt_id,
 				   'slot' => $this->slot_id ));
 		return ( $resultset && count( $resultset ) != 0 ) 
 			? $resultset->id : null;
@@ -554,18 +643,19 @@ class mia_profile_question_attempt extends mia_page_profile
 			." FROM {question_attempt_step_data} qasd "
 			." JOIN {question_attempt_steps} qas ON qasd.attemptstepid=qas.id "
 			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
-			." JOIN {quiz_attempts} quiza ON qa.questionusageid=quiza.id "
+			." JOIN {question_usages} quba ON quba.id=qa.questionusageid "
+			." JOIN {quiz_attempts} quiza ON quiza.uniqueid=quba.id "
 			." JOIN {quiz_slots} slots ON slots.slot=qa.slot "
 			." JOIN {question} q ON q.id=slots.questionid "
-			." JOIN {quiz} quiz ON quiza.quiz=quiz.id "
+			." JOIN {quiz} quiz ON quiza.quiz=quiz.id AND quiz.id=slots.quizid "
 			// Want only maximum step value
 			." LEFT OUTER JOIN {question_attempt_steps} qas2 ON qas.id=qas2.id "
 			."  AND qas.sequencenumber < qas2.sequencenumber "
-			." WHERE qa.slot=:slot AND qa.questionusageid=:attempt "
+			." WHERE qa.slot=:slot AND quba.id=:attempt_id "
 			."  AND qasd.name='answer' "
 			."  AND qas2.id IS NULL";	// <- filter outer join for maximum step value
 		$resultset = $DB->get_record_sql( $query,
-			array( 'slot' => $this->slot_id, 'attempt' => $this->attempt_id ) );
+			array( 'slot' => $this->slot_id, 'quiza_id' => $this->quiza_id ) );
 		if ( $resultset && count ( $resultset ) != 0 )  {
 			$annotation_record->object_type = AN_OTYPE_ATTEMPT;
 			$annotation_record->object_id = (int) $resultset->object_id;
@@ -753,8 +843,14 @@ class mia_page_info
 				case 'summary.php':
 					$this->page = '/blocks/marginalia/summary';
 					break;
+				case 'quiz/question_attempt':
+					$this->page = '/blocks/marginalia/quiz/question_attempt';
+					$this->object_type = AN_OTYPE_ATTEMPT;
+					$this->params['attempt'] = (int) $params['attempt'];
+					$this->params['slot'] = (int) $params['slot'];
+					break;
 				default:
-					throw new Exception("Page URL unknown to Marginalia");
+					throw new Exception("Page URL unknown to Marginalia: ".$path);
 			}
 		}
 		// Forum
@@ -788,7 +884,7 @@ class mia_page_info
 					$this->object_type = AN_OTYPE_POST;
 					break;
 				default:
-					throw new Exception("Page URL unknown to Marginalia");
+					throw new Exception("Page URL unknown to Marginalia: ".$path);
 			}
 		}
 		// Quiz
@@ -819,7 +915,7 @@ class mia_page_info
 					$this->params['slot'] = (int) $params['slot'];
 					break;
 				default:
-					throw new Exception("Page URL unknown to Marginalia");
+					throw new Exception("Page URL unknown to Marginalia: ".$path);
 			}
 		}
 		elseif ( preg_match( '/^.*\/course\/view\.php(.*)/', $path, $matches ) ) {
@@ -828,7 +924,7 @@ class mia_page_info
 			$this->params['course'] = (int) $params['id'];
 		}
 		else
-			throw new Exception("Page URL unknown to Marginalia");
+			throw new Exception("Page URL unknown to Marginalia:".$path);
 	}
 }
 
@@ -901,9 +997,14 @@ class moodle_marginalia
 				return new mia_profile_quiz_grading( $this, $info );
 			case '/mod/quiz/reviewquestion':
 			case '/mod/quiz/comment':
-				return new mia_profile_question_attempt( $this, $info,
+				return new mia_profile_quiz_attempt( $this, $info,
 					AN_OTYPE_ATTEMPT,
 					(int) $params[ 'attempt'], (int) $params[ 'slot' ] );
+				break;
+			// Will never happen, because it's only used internally:
+			case '/blocks/marginalia/quiz/question_attempt':
+				return new mia_profile_quiz_attempt( $this, $info,
+					(int) $params['attempt'], (int) $params[ 'slot' ] );
 				break;
 			// Course:
 			case '/course/view':

@@ -89,7 +89,8 @@ function MoodleMarginalia( annotationPath, url, moodleRoot, userId, prefs, param
  * kind of hacky as Moodle might change. Currently, for each question
  * answer in report or review, Moodle spits out something like:
  *   <input name="q8:1_:sequencecheck" value="3" type="hidden"/>
- * where for q8:1, 8 is the attempt and 1 is the slot
+ * where for q8:1, 8 is the question attempt and 1 is the slot
+ * (question_usages.id=quiz_attempts.uniqueid, in this example = 8)
  *
  * I'm not sure if the step ID is also needed (if so, where do I
  * get it?). Probably fine since this generates a real, working URL
@@ -97,16 +98,22 @@ function MoodleMarginalia( annotationPath, url, moodleRoot, userId, prefs, param
  * #geof# need to test with multiple steps (attempted
  * answers to the same question by the same student
  * in the same quiz)
+ *
+ * The returned URL is not a real URL in the UI, as Moodle has
+ * no URLs indexed on question_attempt ID. But that's what I
+ * need, so that's what I use.
 */
-MoodleMarginalia.getQuizAttemptUrl = function( root )
+MoodleMarginalia.getQuestionAttemptUrl = function( root )
 {
 	var inputs = $( "input[type='hidden']", root );
 	for ( var i = 0; i < inputs.length; ++i ) {
 		var node = inputs[ i ];
 		var m = node.name.match( /(\d+):(\d+)_:sequencecheck/ );
 		if ( m ) {
-			var url = '/mod/quiz/reviewquestion.php?attempt=' + m[ 1 ] 
+			var url = '/blocks/marginalia/quiz/question_attempt?attempt=' + m[ 1 ]
 				+ '&slot=' + m[ 2 ];
+			//var url = '/mod/quiz/reviewquestion.php?attempt=' + m[ 1 ] 
+			//	+ '&slot=' + m[ 2 ];
 			console.log("found quiz answer attempt: " + url);
 			return url;
 		}
@@ -178,8 +185,13 @@ MoodleMarginalia.prototype.onload = function( pageName )
 				// Selector's first argument must return element list, hence
 				// the identity function. Also need to fabricate a URL.
 				post_url: new Selector( function( root ) { return [root] }, 
-					null, MoodleMarginalia.getQuizAttemptUrl )
+					null, MoodleMarginalia.getQuestionAttemptUrl )
 			};
+			/*
+			 * Sample URLs:
+			 * review.php?attempt=9 q10:1_:sequencecheck
+			 * reviewquestion.php?attempt=9&Gslot=1 q10:1_:sequencecheck
+			 */
 			// Add annotation margins
 			$( '.que.essay .ablock .answer div' ).after(
 				'<ol class="mia_margin"><li class="mia_dummyfirst"></li></ol>');
