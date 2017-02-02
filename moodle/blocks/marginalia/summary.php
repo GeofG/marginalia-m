@@ -410,7 +410,7 @@ class annotation_summary_page
 					$a->fullname = $this->moodlemia->fullname2(
 						$annotation->firstname, $annotation->lastname,
 						$annotation->firstnamephonetic, $annotation->lastnamephonetic,
-						$annotation->middlename, $annotation->alternatename ) );
+						$annotation->middlename, $annotation->alternatename );
 					echo $this->zoom_link( $tsummary->summary_url( ), get_string( 'zoom_user_hover', ANNOTATION_STRINGS, $a) );
 				}
 				echo "</td>\n";
