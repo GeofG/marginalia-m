@@ -1283,7 +1283,7 @@ class quiz_review_annotation_url_handler extends annotation_url_handler
 		return "\nJOIN {question_attempt_step_data} qasd "
 			." JOIN {question_attempt_steps} qas ON qasd.attemptstepid=qas.id "
 			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
-			." JOIN {quiz_attempts} quiza ON qa.questionusageid=quiza.id "
+			." JOIN {quiz_attempts} quiza ON qa.questionusageid=quiza.uniqueid "
 			." JOIN {quiz} quiz ON quiza.quiz=quiz.id "
 			// Want only maximum step value
 			." LEFT OUTER JOIN {question_attempt_steps} qas2 ON qas.id=qas2.id "

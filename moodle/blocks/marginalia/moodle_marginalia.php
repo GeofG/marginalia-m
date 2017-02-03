@@ -500,7 +500,7 @@ class mia_profile_quiz_attempt extends mia_page_profile
 	public $slot_id = null;
 	
 	// Had to reverse order of parameters because multiple IDs
-	public function __construct( $moodlemia, $page_info, $quiza_id, $slot_id )
+	public function __construct( $moodlemia, $page_info, $quiza_id, $slot_id=null )
 	{
 		parent::__construct( $moodlemia, $page_info, AN_OTYPE_ATTEMPT, true );
 		$this->quiza_id = $quiza_id;
@@ -994,18 +994,17 @@ class moodle_marginalia
 			// Quiz:
 			case '/mod/quiz/report':
 			case '/mod/quiz/review':	// Works for this too!
-				return new mia_profile_quiz_grading( $this, $info );
+				//return new mia_profile_quiz_grading( $this, $info );
 			case '/mod/quiz/reviewquestion':
 			case '/mod/quiz/comment':
+				$slot = $params[ 'slot' ];
+				$slot = $slot ? (int) $slot : null;
 				return new mia_profile_quiz_attempt( $this, $info,
-					AN_OTYPE_ATTEMPT,
-					(int) $params[ 'attempt'], (int) $params[ 'slot' ] );
-				break;
+					(int) $params[ 'attempt'], $slot );
 			// Used internally:
 			case '/blocks/marginalia/quiz/question_attempt':
 				return new mia_profile_question_attempt( $this, $info,
-					(int) $params['attempt'], (int) $params[ 'slot' ] );
-				break;
+					(int) $params[ 'attempt' ], (int) $params[ 'slot' ] );
 			// Course:
 			case '/course/view':
 				return new mia_profile_course( $this, $info, (int) $params[ 'id' ]);
