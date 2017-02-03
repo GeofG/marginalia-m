@@ -587,9 +587,9 @@ class mia_profile_question_attempt extends mia_page_profile
 	public $slot_id = null;
 	
 	// Had to reverse order of parameters because multiple IDs
-	public function __construct( $moodlemia, $page_info, $object_type, $attempt_id, $slot_id )
+	public function __construct( $moodlemia, $page_info, $attempt_id, $slot_id )
 	{
-		parent::__construct( $moodlemia, $page_info, $object_type, true );
+		parent::__construct( $moodlemia, $page_info, AN_OTYPE_ATTEMPT, true );
 		$this->attempt_id = $attempt_id;
 		$this->slot_id = $slot_id;
 		$this->nameDisplay = "quoteAuthors";
@@ -655,7 +655,7 @@ class mia_profile_question_attempt extends mia_page_profile
 			."  AND qasd.name='answer' "
 			."  AND qas2.id IS NULL";	// <- filter outer join for maximum step value
 		$resultset = $DB->get_record_sql( $query,
-			array( 'slot' => $this->slot_id, 'quiza_id' => $this->quiza_id ) );
+			array( 'slot' => $this->slot_id, 'attempt_id' => $this->attempt_id ) );
 		if ( $resultset && count ( $resultset ) != 0 )  {
 			$annotation_record->object_type = AN_OTYPE_ATTEMPT;
 			$annotation_record->object_id = (int) $resultset->object_id;
@@ -1001,9 +1001,9 @@ class moodle_marginalia
 					AN_OTYPE_ATTEMPT,
 					(int) $params[ 'attempt'], (int) $params[ 'slot' ] );
 				break;
-			// Will never happen, because it's only used internally:
+			// Used internally:
 			case '/blocks/marginalia/quiz/question_attempt':
-				return new mia_profile_quiz_attempt( $this, $info,
+				return new mia_profile_question_attempt( $this, $info,
 					(int) $params['attempt'], (int) $params[ 'slot' ] );
 				break;
 			// Course:

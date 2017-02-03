@@ -193,7 +193,7 @@ MoodleMarginalia.prototype.onload = function( pageName )
 			 * reviewquestion.php?attempt=9&Gslot=1 q10:1_:sequencecheck
 			 */
 			// Add annotation margins
-			$( '.que.essay .ablock .answer div' ).after(
+			$( '.que.essay .ablock .answer div' ).before(
 				'<ol class="mia_margin"><li class="mia_dummyfirst"></li></ol>');
 			$( 'body' ).addClass( 'mia_annotated' );
 			this.init(selectors);
@@ -340,7 +340,12 @@ MoodleMarginalia.prototype.createAnnotation = function( event, postId )
 MoodleMarginalia.prototype.fixControlMargin = function( post )
 {
 	var margin = jQuery( 'ol.mia_margin', post.getElement( ) );
-	var postContent = jQuery( '.content .posting', post.getElement( ) );
+	var postContent;
+	// For quiz answers:
+	postContent = jQuery( '.qtype_essay_response', post.getElement( ) );
+	// For forum posts:
+	if ( ! postContent )
+		postContent = jQuery( '.content .posting', post.getElement( ) );
 	margin.css( 'min-height', postContent.height( ) );
 	postContent.css( 'min-height', margin.height( ) );
 /*	margin.height( 'auto' );

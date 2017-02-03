@@ -175,14 +175,18 @@ body.mia_annotated button#hide-all-annotations {
 	display: inline;
 }
 
+.mia_annotated .essay .answer {
+	position: relative;
+}
 .mia_annotated .essay .answer .qtype_essay_response {
 	margin-right: 17.2em;
 }
 .mia_annotated .essay .answer .mia_margin {
-	position: absolute;
+	float: right;
 	top: 0;
 	right: 0;
 	box-sizing: border-box;
+	height: auto;	/* change here to avoid touching marginalia.css */
 }
 @media print
 {
