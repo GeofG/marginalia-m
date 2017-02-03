@@ -1164,10 +1164,10 @@ class quiz_report_annotation_url_handler extends annotation_url_handler
 	var $courseid;
 	var $forumid;
 
-	function __construct( $cm_id, $slot )
+	function __construct( $quiz_id, $slot )
 	{
 		parent::__construct( );
-		$this->cm_id = $cm_id;
+		$this->quiz_id = $quiz_id;
 		$this->slot_id = $slot;
 		$this->capannotate = 'mod/quiz:grade';
 	}
@@ -1181,10 +1181,11 @@ class quiz_report_annotation_url_handler extends annotation_url_handler
 		$this->titlehtml = 'a quiz';
 		$this->parenturl = null;
 		$this->parenttitlehtml = null;
-		$cm = get_coursemodule_from_id('quiz', $this->cm_id);
-		$this->modinstanceid = (int) $cm->instance;
+		$cm = get_coursemodule_from_id('quiz', $this->quiz_id);
+		$this->modinstanceid = (int) $this->quiz_id;
 		$this->courseid = $cm->course;
 		$this->modulename = 'quiz';
+		$this->capannotate = 'mod/quiz:grade';
 	}
 
 	function get_fields( &$params )
@@ -1224,7 +1225,7 @@ class quiz_report_annotation_url_handler extends annotation_url_handler
 			."\n AND qas2.id IS NULL"	// <- filter outer join for maximum step value
 			."\n AND a.object_type= :object_type"
 			."\n AND a.object_id=qas.id";
-		$params['quiz'] = $this->modinstanceid;
+		$params['quiz'] = $this->quiz_id;
 		$params['slot'] = $this->slot_id;
 		if ( $summary->ofuser )  {
 			$params[ 'ofuserid' ] = $summary->ofuser->id;
@@ -1258,7 +1259,8 @@ class quiz_review_annotation_url_handler extends annotation_url_handler
 		$attempt = $DB->get_record( 'quiz_attempts', array( 'id' => $this->attempt_id ) );
 		$quiz = $DB->get_record( 'quiz', array( 'id' => $attempt->quiz ) );
 		$this->courseid = (int) $quiz->course;
-		$this->modinstanceid = (int) $this->attempt_id;
+		$this->modinstanceid = (int) $quiz->id;
+		$this->capannotate = 'mod/quiz:grade';
 	}
 
 	function get_fields( &$params )
@@ -1301,7 +1303,7 @@ class quiz_review_annotation_url_handler extends annotation_url_handler
 			."\n AND a.object_type= :object_type"
 			."\n AND a.object_id=qas.id";
 		#$params['user'] = $this->user_id;
-		$params['attempt'] = $this->modinstanceid;
+		$params['attempt'] = $this->attempt_id;
 		if ( $summary->ofuser )  {
 			$params[ 'ofuserid' ] = $summary->ofuser->id;
 			$cond .= " AND a.quote_author_id= :ofuserid";

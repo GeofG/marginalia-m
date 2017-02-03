@@ -139,17 +139,17 @@ table td#annotation-controls {
 	background: none;
 }
 
-.mia_margin .mia_tip .controls {
+.mia_margin .mia_tip .mia_controls {
 	text-align: right;
 	float: none;
 }
 
-.mia_margin li .controls {
+.mia_margin li .mia_controls {
 	visibility: hidden;
 }
 
-.mia_margin li:hover .controls,
-.mia_margin li.mia_hover .controls {
+.mia_margin li:hover .mia_controls,
+.mia_margin li.mia_hover .mia_controls {
 	visibility: visible;
 }
 

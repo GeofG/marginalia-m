@@ -149,7 +149,7 @@ em.mia_annotation sup a {
 	padding: 0;
 }
 
-.mia_margin li .controls {
+.mia_margin li .mia_controls {
 	float: right;
 	vertical-align: top;
 	/*display: none;*/
@@ -183,7 +183,7 @@ em.mia_annotation sup a {
 	background-color: #bbb;
 }
 	
-.mia_margin li .controls button,
+.mia_margin li .mia_controls button,
 .mia_margin li button.expand-edit {
 	line-height: 1em;
 	border: none;
@@ -198,7 +198,7 @@ em.mia_annotation sup a {
 }
 
 /*
-.mia_margin li .controls button:hover,
+.mia_margin li .mia_controls button:hover,
 .mia_margin li button.mia_expand-edit {
 	font-weight: bold;
 }

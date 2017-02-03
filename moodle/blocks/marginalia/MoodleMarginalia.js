@@ -114,7 +114,7 @@ MoodleMarginalia.getQuestionAttemptUrl = function( root )
 				+ '&slot=' + m[ 2 ];
 			//var url = '/mod/quiz/reviewquestion.php?attempt=' + m[ 1 ] 
 			//	+ '&slot=' + m[ 2 ];
-			console.log("found quiz answer attempt: " + url);
+			//console.log("found quiz answer attempt: " + url);
 			return url;
 		}
 	}
@@ -131,7 +131,7 @@ MoodleMarginalia.getQuestionAttemptUrl = function( root )
  */
 MoodleMarginalia.prototype.onload = function( pageName )
 {
-	console.log('page name: ' + pageName );
+	//console.log('page name: ' + pageName );
 	initLogging();
 
 	// check whether this page should have annotations enabled at all
@@ -265,6 +265,7 @@ MoodleMarginalia.prototype.init = function( selectors )
 	// Lets user know s/he can click to create an annotation.
 	if ( this.canAnnotate ) {
 		var margin = jQuery( '.mia_margin' );
+		margin.addClass( 'mia_annotatable' );
 		margin.mouseover( function( e ) { margin.toggleClass( 'hover', e.target == margin[0] ); } );
 		margin.mouseleave( function( ) { margin.removeClass( 'hover' ); } );
 		

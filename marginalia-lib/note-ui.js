@@ -67,7 +67,6 @@ PostMicro.prototype.initMargin = function( marginalia )
 	//	var margin = this.getNotesElement( marginalia );
 		margin.onmousedown = function( ) {
 			marginalia.cachedSelection = marginalia.getSelection( );
-			//console.log( 'cache selection: ' + marginalia.cachedSelection );
 		};
 		var post = this;
 		margin.onclick = function( event ) {
@@ -101,7 +100,7 @@ PostMicro.prototype.showTip = function( marginalia, tip, onclose )
 			onclose( );
 	};
 	
-	var controls = domutil.element( 'div', { className: 'controls' } );
+	var controls = domutil.element( 'div', { className: 'mia_controls' } );
 	// delete button
 	controls.appendChild( domutil.button( {
 		className:  Marginalia.C_DELETEBUTTON,
@@ -349,7 +348,7 @@ Marginalia.prototype.bindNoteBehavior = function( node, property, value )
  */
 Marginalia.defaultDisplayNote = function( marginalia, annotation, noteElement, params )
 {
-	var controls = domutil.element( 'div', { className: 'controls' } );
+	var controls = domutil.element( 'div', { className: 'mia_controls' } );
 	noteElement.appendChild( controls );
 		
 	// add custom buttons

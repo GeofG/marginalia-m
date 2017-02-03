@@ -1178,7 +1178,7 @@ function _unhoverAnnotation( event )
 function _keyupCreateAnnotation( event )
 {
 	var marginalia = window.marginalia;
-	if ( null != marginalia.loginUserId )
+	if ( null != marginalia.loginUserId && marginalia.canAnnotate )
 	{
 		// Enter to create a regular note
 		if ( 13 == event.keyCode )
