@@ -28,6 +28,15 @@
 
 /* ************************ User Functions ************************ */
 
+/** Used to find posts matching a given URL */
+function defaultPostFinder( mia, posts )
+{
+	return function( url )
+	{
+		return posts.getPostByUrl( url, mia.baseUrl );
+	}
+}
+
 /**
  * Must be called before any other annotation functions
  * service - used to connect to the server side
@@ -66,6 +75,7 @@ function Marginalia( service, loginUserId, sheet, features )
 	this.lastUpdate = null;
 	this.canAnnotate = true;
 	this.nameDisplay = "everyone";
+	this.postFinderFactory = defaultPostFinder
 	
 	this.selectors = {
 		post: new Selector( '.hentry', '.hentry .hentry' ),
@@ -157,6 +167,17 @@ function Marginalia( service, loginUserId, sheet, features )
 				this.keywordService = value;
 				break;
 				
+			// URLs can match if they are not the same, e.g. because annotations
+			// from earlier versions of something are displayed for later ones
+			// (moodle question attempt steps)
+			// This points to a factory, used thus:
+			// var pf = postFinderFactory( marginalia, posts )
+			// var post = pf.match( annotation.url );
+			// if ( post != null ) ...
+			case 'postFinderFactory':
+				this.postFinderFactory = value;
+				break;
+
 			// The maximum length of a margin note, in characters
 			case 'maxNoteLength':
 				this.maxNoteLength = value;
@@ -469,8 +490,10 @@ Marginalia.prototype.loadAnnotations = function( annotations )
 	if ( ! this.loadInterval )
 	{
 		var marginalia = this;
+		var posts = marginalia.listPosts( );
+		var postFinder = this.postFinderFactory( marginalia, posts.getAllPosts( ) );
 		this.loadInterval = setInterval( function( ) {
-			marginalia.coopLoadAnnotations( );
+			marginalia.coopLoadAnnotations( postFinder );
 		}, Marginalia.COOP_TIMEOUT );
 	}
 }
@@ -482,7 +505,7 @@ Marginalia.prototype.loadAnnotations = function( annotations )
  * is basically a way to implement cooperative multitasking so that if many annotations
  * need to be displayed the browser won't lock up.
  */
-Marginalia.prototype.coopLoadAnnotations = function( )
+Marginalia.prototype.coopLoadAnnotations = function( postFinder )
 {
 	var startTime = new Date( );
 	
@@ -511,16 +534,17 @@ Marginalia.prototype.coopLoadAnnotations = function( )
 					marginalia.onMarginHeight( post );
 				
 				url = annotation.getUrl( );
-				post = marginalia.listPosts( ).getPostByUrl( url, marginalia.baseUrl );
+				post = postFinder( url );
 				
 				// Find the first note in the list (if there is one)
 				if ( post )
 				{
 					notes = post.getNotesElement( marginalia );
 					nextNode = notes.firstCild;
+					console.log( "Post found" );
 				}
 				else
-					logError( 'Post not found for URL "' + url + "'" );
+					console.log( 'Post not found for URL "' + url + "'" );
 			}
 			
 			// The server shouldn't normally return URLs that not on this page, but it

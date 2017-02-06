@@ -89,15 +89,10 @@ function MoodleMarginalia( annotationPath, url, moodleRoot, userId, prefs, param
  * kind of hacky as Moodle might change. Currently, for each question
  * answer in report or review, Moodle spits out something like:
  *   <input name="q8:1_:sequencecheck" value="3" type="hidden"/>
- * where for q8:1, 8 is the question attempt and 1 is the slot
+ * where 8 is the question attempt, 1 is the slot, and 3-1 is the step
+ * because the value is the number of steps so far.
+ * See get_sequence_check_count in Moodle code.
  * (question_usages.id=quiz_attempts.uniqueid, in this example = 8)
- *
- * I'm not sure if the step ID is also needed (if so, where do I
- * get it?). Probably fine since this generates a real, working URL
- * to that specific answer.
- * #geof# need to test with multiple steps (attempted
- * answers to the same question by the same student
- * in the same quiz)
  *
  * The returned URL is not a real URL in the UI, as Moodle has
  * no URLs indexed on question_attempt ID. But that's what I
@@ -106,19 +101,83 @@ function MoodleMarginalia( annotationPath, url, moodleRoot, userId, prefs, param
 MoodleMarginalia.getQuestionAttemptUrl = function( root )
 {
 	var inputs = $( "input[type='hidden']", root );
-	for ( var i = 0; i < inputs.length; ++i ) {
+	for ( var i = 0; i < inputs.length; ++i )
+	{
 		var node = inputs[ i ];
 		var m = node.name.match( /(\d+):(\d+)_:sequencecheck/ );
-		if ( m ) {
-			var url = '/blocks/marginalia/quiz/question_attempt?attempt=' + m[ 1 ]
-				+ '&slot=' + m[ 2 ];
-			//var url = '/mod/quiz/reviewquestion.php?attempt=' + m[ 1 ] 
-			//	+ '&slot=' + m[ 2 ];
-			//console.log("found quiz answer attempt: " + url);
-			return url;
+		if ( m )
+		{
+			// Always cast to int for security
+			var attempt = parseInt( m[ 1 ] );
+			var slot = parseInt( m[ 2 ] );
+			var step = parseInt( $( node ).val( ) ) - 1;
+			return '/blocks/marginalia/quiz/question_attempt?attempt=' + attempt
+				+ '&slot=' + slot + '&step=' + step;
 		}
 	}
 	return null;
+}
+
+var MIA_QUBA_URL_PREFIX = '/blocks/marginalia/quiz/question_attempt?';
+function parseMiaQubaUrl( url )
+{
+	if ( ! url.startsWith( MIA_QUBA_URL_PREFIX ) )
+		throw "Unknown quba URL: " + url;
+	var paramStrs = url.substr( MIA_QUBA_URL_PREFIX.length ).split( '&' );
+	var params = { };
+	for ( var j = 0; j < paramStrs.length; ++j )
+	{
+		var pair = paramStrs[ j ].split( '=' );
+		params[ pair[ 0 ] ] = pair[ 1 ];
+	}
+	return {
+		'attempt': parseInt( params[ 'attempt' ] ),
+		'slot': parseInt( params[ 'slot' ] ),
+		'step': parseInt( params[ 'step' ] )
+	}
+}
+
+/**
+ * Custom post finder, because an annotation URL can match URLs for earlier
+ * steps.
+ *
+ * An annotation URL matches a post URL if attempt and slot are the same,
+ * and the step on the post equal to or greater than the step for the
+ * annotation 
+ */
+function moodlePostFinder( mia, posts )
+{
+	this.marginalia = mia;
+	// Build an index on post URLs without steps
+	var stepPosts = { };
+	var prefix = '/blocks/marginalia/quiz/question/question_attempt?';
+	console.log( "Index " + posts.length + ' posts ');
+	for ( var i = 0; i < posts.length; ++i )
+	{
+		var url = posts[ i ].getUrl( this.marginalia.baseUrl );
+		var parsed = parseMiaQubaUrl( url );
+		parsed.post = posts[ i ];
+		var key = parsed.attempt + ':' + parsed.slot;
+		if ( ! stepPosts[ key ] )
+			stepPosts[ key ] = [];
+		stepPosts[ key ].push( parsed );
+	}
+
+	return function( url )
+	{
+		console.log( "Find post url="+url );
+		var parsed = parseMiaQubaUrl( url );
+		var key = parsed.attempt + ':' + parsed.slot;
+		var posts = stepPosts[ key ];
+		if ( ! posts )
+			return null;
+		for ( var i = 0; i < posts.length; ++i )
+		{
+			if ( posts[ i ].step >= parsed.step )
+				return posts[ i ].post;
+		}
+		return null;
+	}
 }
 
 /**
@@ -228,7 +287,8 @@ MoodleMarginalia.prototype.init = function( selectors )
 			link: null
 		},
 		onMarginHeight: function( post ) { moodleMarginalia.fixControlMargin( post ); },
-		selectors: selectors
+		selectors: selectors,
+		postFinderFactory: moodlePostFinder
 	} );
 	
 	// Ensure the sheet drop-down reflects the actual sheet to be shown

@@ -176,21 +176,11 @@ class annotation_summary_query
 				return new user_annotation_url_handler($page_info->params['user']);
 			// Annotations for a report of quiz answers for grading
 			case '/mod/quiz/report':
-				return new quiz_report_annotation_url_handler(
-					$page_info->params['cm'], $page_info->params['slot']);
 			case '/mod/quiz/review':
-				// Note that the id matches quiz_attempts.id
-				return new quiz_review_annotation_url_handler(
-					$USER->id, $page_info->params['attempt']);
-			// Annotation for a question attempt
 			case '/mod/quiz/reviewquestion':
 			case '/mod/quiz/comment':
-				return new quiz_attempt_annotation_url_handler($page_info, 
-					$page_info->params['attempt'], $page_info->params['slot']);
-			// Fake URLs
-			case '/blocks/marginalia/quiz/question_attempt':
-				return new question_attempt_annotation_url_handler($page_info,
-					$page_info->params['attempt'], $page_info->params['slot']);
+			case '/blocks/marginalia/quiz/question_attempt':	// Fake URL
+				return new quba_annotation_url_handler( $page_info );
 			default:
 				echo "no handler for " . $url;
 				return null;
@@ -979,19 +969,16 @@ class post_annotation_url_handler extends annotation_url_handler
 	}
 }
 
-class question_attempt_annotation_url_handler extends annotation_url_handler
+// Shared code for question_attempt_ and quiz_attempt_url_handler
+class quba_annotation_url_handler extends annotation_url_handler
 {
 	public $page_info;
-	public $quba_id;
-	public $slot_id;
 	public $object_id;
 
-	function __construct( $page_info, $quba, $slot )
+	function __construct( $page_info )
 	{
 		parent::__construct( );
 		$this->page_info = $page_info;
-		$this->quba_id = $quba;
-		$this->slot_id = $slot;
 		$this->capannotate = 'mod/quiz:grade';
 	}
 
@@ -1001,36 +988,42 @@ class question_attempt_annotation_url_handler extends annotation_url_handler
 
 		if ( null != $this->titlehtml )
 			return;
-		$this->titlehtml = 'a quiz question';
+		$this->modulename = 'quiz';
 		$this->parenturl = null;
 		$this->parenttitlehtml = null;
-		$this->modulename = 'quiz';
-		// As the Moodle docs indicate, question_usages.id=quiz_attempts.id
+		$this->title = 'a quiz something';
+		// As the Moodle docs indicate, question_usages.id=quiz_attempts.uniqueid
+		$params = array( );
 		$query = "SELECT qas.id AS object_id, quiz.course as course, "
 			." quiza.userid as quote_author_id, q.name as quote_title, quiz.id as quiz_id "
-			." FROM {question_attempt_step_data} qasd "
-			." JOIN {question_attempt_steps} qas ON qasd.attemptstepid=qas.id "
+			." FROM {question_attempt_steps} qas "
 			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
-			." JOIN {question_usages} quba ON quba.id=qa.questionusageid "
-			." JOIN {quiz_attempts} quiza ON quiza.uniqueid=quba.id "
+			." JOIN {quiz_attempts} quiza ON quiza.uniqueid=qa.questionusageid "
 			." JOIN {quiz_slots} slots ON slots.slot=qa.slot "
 			." JOIN {question} q ON q.id=slots.questionid "
-			." JOIN {quiz} quiz ON quiza.quiz=quiz.id AND quiz.id=slots.quizid "
-			// Want only maximum step value
-			." LEFT OUTER JOIN {question_attempt_steps} qas2 ON qas.id=qas2.id "
-			."  AND qas.sequencenumber < qas2.sequencenumber "
-			." WHERE qa.slot=:slot AND quba.id=:attempt "
-			."  AND qasd.name='answer' "
-			."  AND qas2.id IS NULL";	// <- filter outer join for maximum step value
-		$resultset = $DB->get_record_sql( $query,
-			array( 'slot' => $this->slot_id, 'attempt' => $this->quba_id ) );
+			." JOIN {quiz} quiz ON quiza.quiz=quiz.id AND quiz.id=slots.quizid ";
+		$moodlemia = moodle_marginalia::get_instance( );
+		$profile = $moodlemia->get_profile( $this->page_info->url );
+		$profile->get_tables( $query, $params );
+		$query .= ' WHERE 1=1 ';
+		$profile->get_conds( $query, $params );
+		/*
+		echo "QUERY: ".$query."\n";
+		echo "Param count=".count($params).".";
+		foreach ( $params as $p => $v)
+			echo $p."=".$v."\n";
+		*/
+		$resultset = $DB->get_record_sql( $query, $params );
+		//echo "Found ".count($resultset).'records.';
 		if ( $resultset && count ( $resultset ) != 0 ) {
 			$this->courseid = (int) $resultset->course;
 			$this->object_id = (int) $resultset->object_id;
 			$this->modinstanceid = (int) $resultset->quiz_id;
+			//echo "courseid=".$this->courseid.".";
+			return true;
 		}
-		else
-			throw new Exception( "No database records for question attempt." );
+		//echo "Not found.";
+		return false;
 	}
 
 	function get_fields ( &$params )
@@ -1046,269 +1039,28 @@ class question_attempt_annotation_url_handler extends annotation_url_handler
 	{
 		// Don't bother with LEFT OUTER joins; if the attempts is deleted, we're
 		// really not interested in the annotations on it.
-		return " JOIN {question_attempt_steps} qas ON qas.id=a.object_id "
+		$query = " JOIN {question_attempt_steps} qas ON qas.id=a.object_id "
 			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
-			." JOIN {question_usages} quba ON quba.id=qa.questionusageid "
-			." JOIN {quiz_attempts} quiza ON quiza.uniqueid=quba.id "
+			." JOIN {quiz_attempts} quiza ON quiza.uniqueid=qa.questionusageid "
 			." JOIN {quiz} quiz ON quiza.quiz=quiz.id ";
+		$moodlemia = moodle_marginalia::get_instance( );
+		$profile = $moodlemia->get_profile( $this->page_info->url );
+		$profile->get_tables( $query, $params );
+		return $query;
 	}
 
 	function get_conds( &$params, $summary )
 	{
 		$params[ 'object_type' ] = AN_OTYPE_ATTEMPT;
-		$cond = "\n AND a.object_type= :object_type"
-			."\n AND a.object_id=qas.id";
+		$cond = "\n AND a.object_type= :object_type";
+			//."\n AND a.object_id=qas.id";
 		if ( $summary->ofuser )  {
 			$params[ 'ofuserid' ] = $summary->ofuser->id;
 			$cond .= " AND a.quote_author_id= :ofuserid";
 		}
+		$moodlemia = moodle_marginalia::get_instance( );
+		$profile = $moodlemia->get_profile( $this->page_info->url );
+		$profile->get_conds( $cond, $params );
 		return $cond;
 	}
 }
-
-/* Similar to question_attempt, but takes a quiz_attempt id */
-class quiz_attempt_annotation_url_handler extends annotation_url_handler
-{
-	public $page_info;
-	public $qattempt_id;
-	public $slot_id;
-	public $object_id;
-
-	function __construct( $page_info, $qattempt, $slot )
-	{
-		parent::__construct( );
-		$this->page_info = $page_info;
-		$this->qattempt_id = $qattempt;
-		$this->slot_id = $slot;
-		$this->capannotate = 'mod/quiz:grade';
-	}
-
-	function fetch_metadata( )
-	{
-		global $DB;
-
-		if ( null != $this->titlehtml )
-			return;
-		$this->titlehtml = 'a quiz';
-		$this->parenturl = null;
-		$this->parenttitlehtml = null;
-		$this->modulename = 'quiz';
-		// As the Moodle docs indicate, question_usages.id=quiz_attempts.id
-		$query = "SELECT qas.id AS object_id, quiz.course as course, "
-			." quiza.userid as quote_author_id, q.name as quote_title, quiz.id as quiz_id "
-			." FROM {question_attempt_step_data} qasd "
-			." JOIN {question_attempt_steps} qas ON qasd.attemptstepid=qas.id "
-			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
-			." JOIN {question_usages} quba ON quba.id=qa.questionusageid "
-			." JOIN {quiz_attempts} quiza ON quiza.uniqueid=quba.id "
-			." JOIN {quiz_slots} slots ON slots.slot=qa.slot "
-			." JOIN {question} q ON q.id=slots.questionid "
-			." JOIN {quiz} quiz ON quiza.quiz=quiz.id AND quiz.id=slots.quizid "
-			// Want only maximum step value
-			." LEFT OUTER JOIN {question_attempt_steps} qas2 ON qas.id=qas2.id "
-			."  AND qas.sequencenumber < qas2.sequencenumber "
-			." WHERE qa.slot=:slot AND quiza.id=:qattempt "
-			."  AND qasd.name='answer' "
-			."  AND qas2.id IS NULL";	// <- filter outer join for maximum step value
-		$resultset = $DB->get_record_sql( $query,
-			array( 'slot' => $this->slot_id, 'qattempt' => $this->qattempt_id ) );
-		if ( $resultset && count ( $resultset ) != 0 ) {
-			$this->courseid = (int) $resultset->course;
-			$this->object_id = (int) $resultset->object_id;
-			$this->modinstanceid = (int) $resultset->quiz_id;
-		}
-		else
-			throw new Exception( "No database records for quiz attempt." );
-	}
-
-	function get_fields ( &$params )
-	{
-		return ",\n 'attempt' AS section_type, 'attempt' AS row_type"
-			. ",\n quiz.name AS section_name"
-			. ",\n null AS section_url"
-			. ",\n 'attempt' AS object_type"
-			. ",\n qas.id AS object_id";
-	}
-
-	function get_tables( &$params )
-	{
-		// Don't bother with LEFT OUTER joins; if the attempts is deleted, we're
-		// really not interested in the annotations on it.
-		return " JOIN {question_attempt_steps} qas ON qas.id=a.object_id "
-			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
-			." JOIN {question_usages} quba ON quba.id=qa.questionusageid "
-			." JOIN {quiz_attempts} quiza ON quiza.uniqueid=quba.id "
-			." JOIN {quiz} quiz ON quiza.quiz=quiz.id ";
-	}
-
-	function get_conds( &$params, $summary )
-	{
-		$params[ 'object_type' ] = AN_OTYPE_ATTEMPT;
-		$cond = "\n AND a.object_type= :object_type"
-			."\n AND a.object_id=qas.id";
-		if ( $summary->ofuser )  {
-			$params[ 'ofuserid' ] = $summary->ofuser->id;
-			$cond .= " AND a.quote_author_id= :ofuserid";
-		}
-		return $cond;
-	}
-}
-
-class quiz_report_annotation_url_handler extends annotation_url_handler
-{
-	var $cm_id;
-	var $slot_id;
-	var $titlehtml;
-	var $parenturl;
-	var $parenttitlehtml;
-	var $courseid;
-	var $forumid;
-
-	function __construct( $quiz_id, $slot )
-	{
-		parent::__construct( );
-		$this->quiz_id = $quiz_id;
-		$this->slot_id = $slot;
-		$this->capannotate = 'mod/quiz:grade';
-	}
-
-	function fetch_metadata( )
-	{
-		global $CFG, $DB;
-		
-		if ( null != $this->titlehtml )
-			return;
-		$this->titlehtml = 'a quiz';
-		$this->parenturl = null;
-		$this->parenttitlehtml = null;
-		$cm = get_coursemodule_from_id('quiz', $this->quiz_id);
-		$this->modinstanceid = (int) $this->quiz_id;
-		$this->courseid = $cm->course;
-		$this->modulename = 'quiz';
-		$this->capannotate = 'mod/quiz:grade';
-	}
-
-	function get_fields( &$params )
-	{
-		global $CFG, $DB;
-		//$params[ 'section_url_base' ] = $CFG->wwwroot.'/mod/quiz/report.php?id='
-		//	.$this->quiz_id.'&mode=grading&slot='.$this->slot_id.'&qid='.$this->slot_id
-		//	.'&grade=all';
-		return ",\n 'attempt' AS section_type, 'attempt' AS row_type"
-			. ",\n quiz.name AS section_name"
-			. ",\n null AS section_url"
-			. ",\n 'attempt' AS object_type"
-			. ",\n qasd.id AS object_id";
-	}
-	
-	function get_tables( &$params )
-	{
-		// Don't bother with LEFT OUTER joins; if the attempts is deleted, we're
-		// really not interested in the annotations on it.
-		return "\nJOIN {question_attempt_step_data} qasd "
-			." JOIN {question_attempt_steps} qas ON qasd.attemptstepid=qas.id "
-			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
-			." JOIN {quiz_attempts} quiza ON qa.questionusageid=quiza.id "
-			." JOIN {quiz} quiz ON quiza.quiz=quiz.id "
-			// Want only maximum step value
-			." LEFT OUTER JOIN {question_attempt_steps} qas2 ON qas.id=qas2.id "
-			."  AND qas.sequencenumber < qas2.sequencenumber ";
-	}
-	
-	function get_conds( &$params, $summary )
-	{
-		if ( $this->modinstanceid == null )
-			$this->fetch_metadata( );
-		$params[ 'object_type' ] = AN_OTYPE_ATTEMPT;
-		$cond = "\n AND qa.slot=:slot AND quiz.id=:quiz "
-			."\n AND qasd.name='answer' "
-			."\n AND qas2.id IS NULL"	// <- filter outer join for maximum step value
-			."\n AND a.object_type= :object_type"
-			."\n AND a.object_id=qas.id";
-		$params['quiz'] = $this->quiz_id;
-		$params['slot'] = $this->slot_id;
-		if ( $summary->ofuser )  {
-			$params[ 'ofuserid' ] = $summary->ofuser->id;
-			$cond .= " AND a.quote_author_id= :ofuserid";
-		}
-		return $cond;
-	}
-}
-
-class quiz_review_annotation_url_handler extends annotation_url_handler
-{
-	var $attempt_id;
-
-	function __construct( $userid, $attempt )
-	{
-		parent::__construct( );
-		# don't use userid
-		$this->attempt_id = (int) $attempt;
-	}
-
-	function fetch_metadata( )
-	{
-		global $CFG, $DB;
-		
-		if ( null != $this->titlehtml )
-			return;
-		$this->titlehtml = 'a quiz';
-		$this->parenturl = null;
-		$this->parenttitlehtml = null;
-		$this->modulename = 'quiz';
-		$attempt = $DB->get_record( 'quiz_attempts', array( 'id' => $this->attempt_id ) );
-		$quiz = $DB->get_record( 'quiz', array( 'id' => $attempt->quiz ) );
-		$this->courseid = (int) $quiz->course;
-		$this->modinstanceid = (int) $quiz->id;
-		$this->capannotate = 'mod/quiz:grade';
-	}
-
-	function get_fields( &$params )
-	{
-		global $CFG, $DB;
-		//$params[ 'section_url_base' ] = $CFG->wwwroot.'/mod/quiz/report.php?id='
-		//	.$this->quiz_id.'&mode=grading&slot='.$this->slot_id.'&qid='.$this->slot_id
-		//	.'&grade=all';
-		return ",\n 'attempt' AS section_type, 'attempt' AS row_type"
-			. ",\n quiz.name AS section_name"
-			. ",\n null AS section_url"
-			. ",\n 'attempt' AS object_type"
-			. ",\n qasd.id AS object_id";
-	}
-	
-	function get_tables( &$params )
-	{
-		// Don't bother with LEFT OUTER joins; if the attempts is deleted, we're
-		// really not interested in the annotations on it.
-		return "\nJOIN {question_attempt_step_data} qasd "
-			." JOIN {question_attempt_steps} qas ON qasd.attemptstepid=qas.id "
-			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
-			." JOIN {quiz_attempts} quiza ON qa.questionusageid=quiza.uniqueid "
-			." JOIN {quiz} quiz ON quiza.quiz=quiz.id "
-			// Want only maximum step value
-			." LEFT OUTER JOIN {question_attempt_steps} qas2 ON qas.id=qas2.id "
-			."  AND qas.sequencenumber < qas2.sequencenumber ";
-	}
-	
-	function get_conds( &$params, $summary )
-	{
-		if ( $this->modinstanceid == null )
-			$this->fetch_metadata( );
-		$params[ 'object_type' ] = AN_OTYPE_ATTEMPT;
-		$cond = 
-			"\n AND quiza.id=:attempt"
-			#."\n AND quiza.userid=:user"
-			."\n AND qasd.name='answer' "
-			."\n AND qas2.id IS NULL"	// <- filter outer join for maximum step value
-			."\n AND a.object_type= :object_type"
-			."\n AND a.object_id=qas.id";
-		#$params['user'] = $this->user_id;
-		$params['attempt'] = $this->attempt_id;
-		if ( $summary->ofuser )  {
-			$params[ 'ofuserid' ] = $summary->ofuser->id;
-			$cond .= " AND a.quote_author_id= :ofuserid";
-		}
-		return $cond;
-	}
-}
-
