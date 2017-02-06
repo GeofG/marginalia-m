@@ -152,6 +152,7 @@ function Marginalia( service, loginUserId, sheet, features )
 				break;
 				
 			// Show flag for recent annotations
+			// If not set, lastread will not be saved to server either
 			case 'enableRecentFlag':
 				this.enableRecentFlag = value;
 				break;
@@ -462,7 +463,7 @@ Marginalia.prototype.showAnnotations = function( url, params )
 	domutil.addClass( document.body, Marginalia.C_ANNOTATED );
 	var marginalia = this;
 	this.annotationService.listAnnotations( url, this.sheet, {
-		mark: 'read',
+		mark: marginalia.enableRecentFlag ? 'read' : '',
 		since: marginalia.lastUpdate,
 		recent: params && params.recent },
 		function( xmldoc ) {

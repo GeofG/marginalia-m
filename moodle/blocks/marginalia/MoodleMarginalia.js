@@ -24,8 +24,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
- *
- * $Id: MoodleMarginalia.js 558 2012-07-12 21:44:06Z geof.glass $
  */
 
 function MoodleMarginalia( annotationPath, url, moodleRoot, userId, prefs, params )
@@ -47,6 +45,7 @@ function MoodleMarginalia( annotationPath, url, moodleRoot, userId, prefs, param
 	this.smartquoteService = params.smartquoteService;
 	this.canAnnotate = params.canAnnotate;
 	this.nameDisplay = params.nameDisplay;
+	this.enableRecentFlag = params.enableRecentFlag;
 	LocalizedAnnotationStrings = params.strings;
 
 	var urlFunc = function( node )
@@ -286,7 +285,7 @@ MoodleMarginalia.prototype.init = function( selectors )
 		showBlockMarkers:  false,
 		showActions:  false,
 		onkeyCreate:  true,
-		enableRecentFlag: true,
+		enableRecentFlag: this.enableRecentFlag,
 		allowAnyUserPatch: this.allowAnyUserPatch ? true : false,
 		canAnnotate: this.canAnnotate,
 		nameDisplay: this.nameDisplay,

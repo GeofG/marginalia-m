@@ -111,8 +111,43 @@ abstract class mia_page_profile
 		$this->object_type = $object_type;
 		$this->no_splash = $no_splash;
 		$this->nameDisplay = "everyone";
+		$this->enableRecentFlag = true;
 	}
 	
+	function can_annotate( )
+	{
+		global $USER;
+		
+		$url = $this->page_info->url;
+		if ( isguestuser() or ! isloggedin() )
+			return false;
+		$handler = annotation_summary_query::handler_for_url( $url );
+		if ( ! $handler )
+			return false;
+		$handler->fetch_metadata( );
+		if ( $handler->modulename && $handler->courseid )
+		{
+			$cm = get_coursemodule_from_instance( $handler->modulename, $handler->modinstanceid, $handler->courseid);
+			if ( $cm )
+			{
+				$modcontext = context_module::instance( $cm->id, $USER );
+//				if ( has_capability('moodle/legacy:guest', $context, $USER->id, false ) )
+//					return false;
+				if ( ! $handler->capannotate )
+					return false;	// annotation of this resource is never permitted
+				else
+					return has_capability($handler->capannotate, $modcontext);
+			}
+			else
+				return false;
+		}
+		else
+		{
+			$modcontext = context_system::instance( );
+			return has_capability( $handler->capannotate, $modcontext, $USER );
+		}
+	}	
+
 	/**
 	 * Note that this returns an actual URL.  Moodle's moodle_url class by default
 	 * does not return a URL - it returns an HTML-escaped URL.  In my opinion,
@@ -237,7 +272,7 @@ abstract class mia_page_profile
 		
 		$refurl = $this->get_refurl( );
 		
-		$canannotate = $this->moodlemia->can_annotate( $refurl );
+		$canannotate = $this->can_annotate( );
 
 		// Get all annotation preferences as an associative array and sets them to defaults
 		// in the database if not already present.
@@ -300,6 +335,7 @@ abstract class mia_page_profile
 		$sstrings = $this->moodlemia->strings_js( );
 		$pageName = $this->page_info->page;
 		$snameDisplay = json_encode($this->nameDisplay);
+		$senableRecentFlag = $this->enableRecentFlag;
 		
 		return <<<SCRIPT
 	var moodleRoot = $swwwroot;
@@ -407,8 +443,7 @@ SCRIPT;
 	
 	public function output_margin( )
 	{
-		$refurl = $this->get_refurl( );
-		$canannotate = $this->moodlemia->can_annotate( $refurl );
+		$canannotate = $this->can_annotate( );
 		$output  = html_writer::tag('ol', '<li class="mia_dummyfirst"></li>',
 			array('class'=>'mia_margin'.($canannotate ? ' mia_annotatable' : '')
 				, 'style'=>'float:right;width:15em'
@@ -463,37 +498,6 @@ class mia_profile_course extends mia_page_profile
 	{ return $this->object_id; }
 }
 
-class mia_profile_quiz_grading extends mia_page_profile
-{
-	public $quiz_id;
-	public $slot_id = null;
-	
-	public function __construct( $moodlemia, $page_info)
-	{
-		parent::__construct( $moodlemia, $page_info, AN_OTYPE_QUIZ, true );
-		$this->object_type = AN_OTYPE_QUIZ;
-		$this->nameDisplay = "quoteAuthors";
-	}
-	
-	public function emit_requires( )
-	{
-		$this->emit_requires_annotate( );
-		$this->moodlemia->emit_plugin_requires( );
-	}
-	
-	public function emit_body( )
-	{
-		$s = $this->margin_js( );
-		$this->emit_init_js( $s );
-		$this->moodlemia->emit_plugin_body( );
-	}
-	
-	public function get_object_id( )
-	{
-		return $this->object_id;
-	}
-}
-
 class mia_profile_quba extends mia_page_profile
 {
 	public $quiz_id = null;
@@ -510,6 +514,14 @@ class mia_profile_quba extends mia_page_profile
 		$this->slot = $slot;
 		$this->step = $step;
 		$this->nameDisplay = "quoteAuthors";
+		$this->enableRecentFlag = false;
+	}
+
+	public function can_annotate( )
+	{
+		if ( $this->step === 0 )
+			return false;
+		return parent::can_annotate( );
 	}
 
 	public function emit_requires( )
@@ -975,10 +987,14 @@ class moodle_marginalia
 				$quiza_id = (int) $params[ 'attempt' ];
 				$slot = (int) $params[ 'slot' ];
 				$step = null;
-				//if ( isset( $params[ 'step' ] ) )
-				//	$step = (int) $params[ 'step' ];
-				return new mia_profile_quba( $this, $info,
-					null, $quiza_id, null, $slot, $step );
+				if ( isset( $params[ 'step' ] ) )
+					$step = (int) $params[ 'step' ];
+				// If step value is zero, switch off annotation entirely
+				if ( $step === 0 )
+					return null;
+				else
+					return new mia_profile_quba( $this, $info,
+						null, $quiza_id, null, $slot, null);
 			// Used internally:
 			case '/blocks/marginalia/quiz/question_attempt':
 				$step = null;
@@ -1332,44 +1348,6 @@ class moodle_marginalia
 	 */
 	public function emit_plugin_body( )
 	{ }
-	
-	/**
-	 * Figure out whether annotation is permitted on a given page
-	 * Should be refactored - same code is in annotate.php
-	 * #geof# should go into a mia_page_profile
-	 */
-	function can_annotate( $url )
-	{
-		global $USER;
-		
-		if ( isguestuser() or ! isloggedin() )
-			return false;
-		$handler = annotation_summary_query::handler_for_url( $url );
-		if ( ! $handler )
-			return false;
-		$handler->fetch_metadata( );
-		if ( $handler->modulename && $handler->courseid )
-		{
-			$cm = get_coursemodule_from_instance( $handler->modulename, $handler->modinstanceid, $handler->courseid);
-			if ( $cm )
-			{
-				$modcontext = context_module::instance( $cm->id, $USER );
-//				if ( has_capability('moodle/legacy:guest', $context, $USER->id, false ) )
-//					return false;
-				if ( ! $handler->capannotate )
-					return false;	// annotation of this resource is never permitted
-				else
-					return has_capability($handler->capannotate, $modcontext);
-			}
-			else
-				return false;
-		}
-		else
-		{
-			$modcontext = context_system::instance( );
-			return has_capability( $handler->capannotate, $modcontext, $USER );
-		}
-	}	
 
 	/**
 	 * Deletes all annotations of a specific user

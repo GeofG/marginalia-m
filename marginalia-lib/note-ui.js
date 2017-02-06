@@ -204,10 +204,10 @@ PostMicro.prototype.showNoteElement = function( marginalia, annotation, nextNode
 		// Is this a recent post?
 		// Don't flag this for one's own notes - that would be cluttered and confusing.
 		// Currently, moodle does not seem to be storing anything in the forum_read table, so this doesn't work
-		var isRecent = annotation.isRecent( );
+		var isRecent = marginalia.enableRecentFlag && annotation.isRecent( );
 //		isRecent = isRecent && marginalia.loginUserId && annotation.getUserId( ) != marginalia.loginUserId;
 		var className = ( quoteFound ? '' : Marginalia.C_QUOTENOTFOUND ) + ' '
-			+ ( isRecent && marginalia.enableRecentFlag ? Marginalia.C_RECENT : '' );
+			+ ( isRecent ? Marginalia.C_RECENT : '' );
 
 		var noteElement = domutil.element( 'li', {
 			id:  Marginalia.ID_PREFIX + annotation.getId(),
