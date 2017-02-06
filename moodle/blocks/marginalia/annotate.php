@@ -161,12 +161,12 @@ class moodle_annotation_service extends AnnotationService
 		{
 			$queryparams = array( );
 			$querysql = $summary->sql( $queryparams );
-/*
+			/*
 			echo "QUERY: <pre>$querysql</pre>\n";
 			echo "PARAMS: \n";
 			foreach ( $queryparams as $key => $value )
 				echo "  $key => $value\n";
-*/
+			*/
 			$annotations = Array( );
 			$annotations_read = Array( );
 			$annotations_unread = Array( );
@@ -335,6 +335,12 @@ class moodle_annotation_service extends AnnotationService
 			// must preprocess fields
 			$id = $DB->insert_record( AN_DBTABLE, $record, true );
 			
+			// Remove orphans from the database
+			// This could be done as a scheduled task, but as I am writing this
+			// the time (=money) required is not worth the effort. Instead do it
+			// occasionally by random chance.
+			//if ( time( ) % 20 == 0 )
+				$moodlemia->cleanup( );
 			if ( $id )  {
 				// Record that this user has read the annotation.
 				// This may be superfluous, as the read flag is not shown for the current user,

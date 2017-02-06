@@ -1051,7 +1051,7 @@ class quba_annotation_url_handler extends annotation_url_handler
 
 	function get_conds( &$params, $summary )
 	{
-		$params[ 'object_type' ] = AN_OTYPE_ATTEMPT;
+		$params[ 'object_type' ] = AN_OTYPE_QUBA_STEP;
 		$cond = "\n AND a.object_type= :object_type";
 			//."\n AND a.object_id=qas.id";
 		if ( $summary->ofuser )  {

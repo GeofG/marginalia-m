@@ -78,7 +78,7 @@ define ( 'AN_OTYPE_DISCUSSION', 3 );
 define ( 'AN_OTYPE_FORUM', 4);
 define ( 'AN_OTYPE_USER', 5);
 define ( 'AN_OTYPE_COURSE', 6);
-define ( 'AN_OTYPE_ATTEMPT', 7);	// Quiz answers
+define ( 'AN_OTYPE_QUBA_STEP', 7);	// Quiz answers
 define ( 'AN_OTYPE_QUIZ', 8);	// Quiz grading
 
 // Needed by several annotation functions - if not set, PHP will throw errors into the output
@@ -508,7 +508,7 @@ class mia_profile_quba extends mia_page_profile
 
 	public function __construct( $moodlemia, $page_info, $quiz_id, $quiza_id, $quba_id, $slot, $step )
 	{
-		parent::__construct( $moodlemia, $page_info, AN_OTYPE_ATTEMPT, true );
+		parent::__construct( $moodlemia, $page_info, AN_OTYPE_QUBA_STEP, true );
 		$this->quiza_id = $quiza_id;
 		$this->quba_id = $quba_id;
 		$this->slot = $slot;
@@ -632,7 +632,7 @@ class mia_profile_quba extends mia_page_profile
 		$this->get_conds( $query, $params );
 		$resultset = $DB->get_record_sql( $query, $params );
 		if ( $resultset && count ( $resultset ) != 0 )  {
-			$annotation_record->object_type = AN_OTYPE_ATTEMPT;
+			$annotation_record->object_type = AN_OTYPE_QUBA_STEP;
 			$annotation_record->object_id = (int) $resultset->object_id;
 			$annotation_record->quote_author_id = (int)$resultset->quote_author_id;
 			$annotation_record->quote_title = $resultset->quote_title;
@@ -820,7 +820,7 @@ class mia_page_info
 					break;
 				case 'quiz/question_attempt':
 					$this->page = '/blocks/marginalia/quiz/question_attempt';
-					$this->object_type = AN_OTYPE_ATTEMPT;
+					$this->object_type = AN_OTYPE_QUBA_STEP;
 					$this->params['attempt'] = (int) $params['attempt'];
 					$this->params['slot'] = (int) $params['slot'];
 					break;
@@ -867,25 +867,25 @@ class mia_page_info
 			switch ( $matches[ 1 ] ) {
 				case 'report.php':
 					$this->page = '/mod/quiz/report';
-					$this->object_type = AN_OTYPE_ATTEMPT;
+					$this->object_type = AN_OTYPE_QUBA_STEP;
 					// I think this ID is the course module ID
 					$this->params['cm'] = (int) $params['id'];
 					$this->params['slot'] = (int) $params['slot'];
 					break;
 				case 'review.php':
 					$this->page = '/mod/quiz/review';
-					$this->object_type = AN_OTYPE_ATTEMPT;
+					$this->object_type = AN_OTYPE_QUBA_STEP;
 					$this->params['attempt'] = (int) $params['attempt'];
 					break;
 				case 'reviewquestion.php':
 					$this->page = '/mod/quiz/reviewquestion';
-					$this->object_type = AN_OTYPE_ATTEMPT;
+					$this->object_type = AN_OTYPE_QUBA_STEP;
 					$this->params['attempt'] = (int) $params['attempt'];
 					$this->params['slot'] = (int) $params['slot'];
 					break;
 				case 'comment.php':
 					$this->page = '/mod/quiz/comment';
-					$this->object_type = AN_OTYPE_ATTEMPT;
+					$this->object_type = AN_OTYPE_QUBA_STEP;
 					$this->params['attempt'] = (int) $params['attempt'];
 					$this->params['slot'] = (int) $params['slot'];
 					break;
@@ -1371,6 +1371,33 @@ class moodle_marginalia
 	{
 		//global $course
 		//add_to_log( $course->id, 'annotation', $op, $url, $args );
+	}
+
+	/**
+	 * Delete orphan data from Marginalia tables
+	 */
+	public function cleanup( )
+	{
+		global $DB;
+
+		// Delete annotations for deleted quiz attempts
+		// Quiz annotations are unreachable once attempt quiz is deleted,
+		// as they are not included on the summary page.
+		$query = 'SELECT m.id FROM {marginalia} m'
+			.' LEFT OUTER JOIN {question_attempt_steps} qas ON m.object_id=qas.id'
+			.' WHERE m.object_type=:object_type AND qas.id IS NULL';
+		$params = array('object_type' => AN_OTYPE_QUBA_STEP);
+		$result = $DB->get_records_sql($query, $params);
+		$DB->delete_records_list('marginalia', 'id', array_keys($result));
+
+		// Delete last read for deleted annotations
+		// Needed for quiz attempts; shouldn't be needed for others, but
+		// will do it anyway just in case.
+		$query = 'SELECT r.id FROM {marginalia_read} r'
+			.' LEFT OUTER JOIN {marginalia} m ON r.annotationid=m.id'
+			.' WHERE m.id IS NULL';
+		$result = $DB->get_records_sql($query, $params);
+		$DB->delete_records_list('marginalia_read', 'id', array_keys($result));
 	}
 }
 
