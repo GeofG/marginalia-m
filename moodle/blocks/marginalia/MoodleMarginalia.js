@@ -112,7 +112,12 @@ MoodleMarginalia.getQuestionAttemptUrl = function( root )
 			var slot = parseInt( m[ 2 ] );
 			var step = parseInt( $( node ).val( ) ) - 1;
 			return '/blocks/marginalia/quiz/question_attempt?attempt=' + attempt
-				+ '&slot=' + slot + '&step=' + step;
+				+ '&slot=' + slot;
+			// Don't use step. Internally always associate with step 1.
+			// Better solution might be to associate with quba instead,
+			// but would then lose the flexibility of being able to specify
+			// a step if my interpretation of Moodle turns out to be wrong.
+			// + '&step=' + step;
 		}
 	}
 	return null;
@@ -130,10 +135,13 @@ function parseMiaQubaUrl( url )
 		var pair = paramStrs[ j ].split( '=' );
 		params[ pair[ 0 ] ] = pair[ 1 ];
 	}
+	var step = null;
+	if ( params[ 'step' ] )
+		step = parseInt( params[ 'step' ] );
 	return {
 		'attempt': parseInt( params[ 'attempt' ] ),
 		'slot': parseInt( params[ 'slot' ] ),
-		'step': parseInt( params[ 'step' ] )
+		'step': step
 	}
 }
 
@@ -288,7 +296,7 @@ MoodleMarginalia.prototype.init = function( selectors )
 		},
 		onMarginHeight: function( post ) { moodleMarginalia.fixControlMargin( post ); },
 		selectors: selectors,
-		postFinderFactory: moodlePostFinder
+		//postFinderFactory: moodlePostFinder
 	} );
 	
 	// Ensure the sheet drop-down reflects the actual sheet to be shown

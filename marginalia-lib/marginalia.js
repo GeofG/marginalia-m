@@ -75,7 +75,7 @@ function Marginalia( service, loginUserId, sheet, features )
 	this.lastUpdate = null;
 	this.canAnnotate = true;
 	this.nameDisplay = "everyone";
-	this.postFinderFactory = defaultPostFinder
+	this.postFinderFactory = defaultPostFinder;
 	
 	this.selectors = {
 		post: new Selector( '.hentry', '.hentry .hentry' ),
@@ -491,7 +491,7 @@ Marginalia.prototype.loadAnnotations = function( annotations )
 	{
 		var marginalia = this;
 		var posts = marginalia.listPosts( );
-		var postFinder = this.postFinderFactory( marginalia, posts.getAllPosts( ) );
+		var postFinder = this.postFinderFactory( marginalia, posts );
 		this.loadInterval = setInterval( function( ) {
 			marginalia.coopLoadAnnotations( postFinder );
 		}, Marginalia.COOP_TIMEOUT );

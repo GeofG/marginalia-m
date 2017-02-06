@@ -527,6 +527,8 @@ class mia_profile_quba extends mia_page_profile
 
 	public function get_tables( &$query, &$params )
 	{
+		/* Do not use: always associate with step sequence 1 instead
+		 * and show annotations with all subsequent steps
 		// If unspecified, get last step
 		if ( $this->step === null)
 		{
@@ -534,10 +536,13 @@ class mia_profile_quba extends mia_page_profile
 				. " ON qas2.questionattemptid=qa.id "
 				. "  AND qas.sequencenumber < qas2.sequencenumber ";
 		}
+		*/
 	}
 	
 	public function get_conds( &$query, &$params )
 	{
+		/* Do not use: always associate with step sequence 1 instead
+		 * and show annotations with all subsequent steps
 		// If unspecified, filter outer join for max step value
 		if ( $this->step === null)
 			$query .= "  AND qas2.id IS NULL";
@@ -547,6 +552,7 @@ class mia_profile_quba extends mia_page_profile
 			$query .= " AND qas.sequencenumber=:step ";
 			$params[ 'step' ] = $this->step;
 		}
+		*/
 		if ( $this->quiz_id !== null )
 		{
 			$query .= " AND quiz.id=:quiz_id";
@@ -567,6 +573,14 @@ class mia_profile_quba extends mia_page_profile
 			$query .= " AND quiza.id=:quiza_id";
 			$params[ 'quiza_id' ] = $this->quiza_id;
 		}
+		// Don't want to annotate when step sequence=0 because then the
+		// answer is blank, so annotations will show errors. The actual
+		// meaning of the sequence number is in qas.state, a string, which
+		// isn't terribly helpful because there's a sequence. Also, the
+		// front-end JS needs an easy way to know whether to allow
+		// annotation. Simplest solution is to always take the qas for 
+		// step 1 regardless of what step the user is looking at.
+		$query .= ' AND qas.sequencenumber = 1';
 	}
 
 	public function get_object_id( )
@@ -961,15 +975,15 @@ class moodle_marginalia
 				$quiza_id = (int) $params[ 'attempt' ];
 				$slot = (int) $params[ 'slot' ];
 				$step = null;
-				if ( isset( $params[ 'step' ] ) )
-					$step = (int) $params[ 'step' ];
+				//if ( isset( $params[ 'step' ] ) )
+				//	$step = (int) $params[ 'step' ];
 				return new mia_profile_quba( $this, $info,
 					null, $quiza_id, null, $slot, $step );
 			// Used internally:
 			case '/blocks/marginalia/quiz/question_attempt':
 				$step = null;
-				if ( isset( $params[ 'step' ] ) )
-					$step = (int) $params[ 'step' ];
+				//if ( isset( $params[ 'step' ] ) )
+				//	$step = (int) $params[ 'step' ];
 				return new mia_profile_quba( $this, $info, null, null, 
 					(int) $params[ 'attempt' ], (int) $params[ 'slot' ], $step );
 			// Course:
