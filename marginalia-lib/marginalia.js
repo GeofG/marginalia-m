@@ -29,12 +29,17 @@
 /* ************************ User Functions ************************ */
 
 /** Used to find posts matching a given URL */
-function defaultPostFinder( mia, posts )
+function DefaultPostFinder( )
+{ }
+
+DefaultPostFinder.prototype.listPosts = function( marginalia, root, selector )
 {
-	return function( url )
-	{
-		return posts.getPostByUrl( url, mia.baseUrl );
-	}
+	return selector.nodes( root );
+}
+
+DefaultPostFinder.prototype.find = function( marginalia, posts, url )
+{
+	return posts.getPostByUrl( url, marginalia.baseUrl );
 }
 
 /**
@@ -75,7 +80,7 @@ function Marginalia( service, loginUserId, sheet, features )
 	this.lastUpdate = null;
 	this.canAnnotate = true;
 	this.nameDisplay = "everyone";
-	this.postFinderFactory = defaultPostFinder;
+	this.postFinder = new DefaultPostFinder( this );
 	
 	this.selectors = {
 		post: new Selector( '.hentry', '.hentry .hentry' ),
@@ -171,12 +176,8 @@ function Marginalia( service, loginUserId, sheet, features )
 			// URLs can match if they are not the same, e.g. because annotations
 			// from earlier versions of something are displayed for later ones
 			// (moodle question attempt steps)
-			// This points to a factory, used thus:
-			// var pf = postFinderFactory( marginalia, posts )
-			// var post = pf.match( annotation.url );
-			// if ( post != null ) ...
-			case 'postFinderFactory':
-				this.postFinderFactory = value;
+			case 'postFinder':
+				this.postFinder = value;
 				break;
 
 			// The maximum length of a margin note, in characters
@@ -383,9 +384,12 @@ Marginalia.prototype.listPosts = function( )
 {
 	if ( ! this.posts )
 	{
-		this.posts = PostPageInfo.getPostPageInfo( document, this.selectors );
-		for ( var i = 0;  i < this.posts.posts.length;  ++i )
+		this.posts = PostPageInfo.getPostPageInfo( this, document, this.selectors, this.postFinder );
+		console.log( "Got the posts..." );
+		for ( var i = 0;  i < this.posts.posts.length;  ++i ) {
+			console.log( "init margin");
 			this.posts.posts[ i ].initMargin( this );
+		}
 	}
 	return this.posts;
 }
@@ -492,9 +496,8 @@ Marginalia.prototype.loadAnnotations = function( annotations )
 	{
 		var marginalia = this;
 		var posts = marginalia.listPosts( );
-		var postFinder = this.postFinderFactory( marginalia, posts );
 		this.loadInterval = setInterval( function( ) {
-			marginalia.coopLoadAnnotations( postFinder );
+			marginalia.coopLoadAnnotations( marginalia.postFinder, posts );
 		}, Marginalia.COOP_TIMEOUT );
 	}
 }
@@ -506,7 +509,7 @@ Marginalia.prototype.loadAnnotations = function( annotations )
  * is basically a way to implement cooperative multitasking so that if many annotations
  * need to be displayed the browser won't lock up.
  */
-Marginalia.prototype.coopLoadAnnotations = function( postFinder )
+Marginalia.prototype.coopLoadAnnotations = function( postFinder, posts )
 {
 	var startTime = new Date( );
 	
@@ -535,7 +538,7 @@ Marginalia.prototype.coopLoadAnnotations = function( postFinder )
 					marginalia.onMarginHeight( post );
 				
 				url = annotation.getUrl( );
-				post = postFinder( url );
+				post = postFinder.find( marginalia, posts, url );
 				
 				// Find the first note in the list (if there is one)
 				if ( post )

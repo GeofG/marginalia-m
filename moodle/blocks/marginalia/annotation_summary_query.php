@@ -994,8 +994,9 @@ class quba_annotation_url_handler extends annotation_url_handler
 		$this->title = 'a quiz something';
 		// As the Moodle docs indicate, question_usages.id=quiz_attempts.uniqueid
 		$params = array( );
-		$query = "SELECT qas.id AS object_id, quiz.course as course, "
-			." quiza.userid as quote_author_id, q.name as quote_title, quiz.id as quiz_id "
+		$query = "SELECT qas.id AS qas_id, quiza.uniqueid AS object_id, "
+			." quiz.course as course, quiza.userid as quote_author_id, "
+			." q.name as quote_title, quiz.id as quiz_id "
 			." FROM {question_attempt_steps} qas "
 			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
 			." JOIN {quiz_attempts} quiza ON quiza.uniqueid=qa.questionusageid "
@@ -1005,7 +1006,9 @@ class quba_annotation_url_handler extends annotation_url_handler
 		$moodlemia = moodle_marginalia::get_instance( );
 		$profile = $moodlemia->get_profile( $this->page_info->url );
 		$profile->get_tables( $query, $params );
-		$query .= ' WHERE 1=1 ';
+		// It's ugly putting these conditions here, but mucking with the Moodle
+		// API is uglier.
+		$query .= " WHERE 1=1 ";
 		$profile->get_conds( $query, $params );
 		/*
 		echo "QUERY: ".$query."\n";
@@ -1013,12 +1016,12 @@ class quba_annotation_url_handler extends annotation_url_handler
 		foreach ( $params as $p => $v)
 			echo $p."=".$v."\n";
 		*/
-		$resultset = $DB->get_record_sql( $query, $params );
+		$resultset = $DB->get_records_sql( $query, $params );
 		//echo "Found ".count($resultset).'records.';
-		if ( $resultset && count ( $resultset ) != 0 ) {
-			$this->courseid = (int) $resultset->course;
-			$this->object_id = (int) $resultset->object_id;
-			$this->modinstanceid = (int) $resultset->quiz_id;
+		foreach ( $resultset as $r ) {
+			$this->courseid = (int) $r->course;
+			$this->object_id = (int) $r->object_id;
+			$this->modinstanceid = (int) $r->quiz_id;
 			//echo "courseid=".$this->courseid.".";
 			return true;
 		}
@@ -1039,10 +1042,10 @@ class quba_annotation_url_handler extends annotation_url_handler
 	{
 		// Don't bother with LEFT OUTER joins; if the attempts is deleted, we're
 		// really not interested in the annotations on it.
-		$query = " JOIN {question_attempt_steps} qas ON qas.id=a.object_id "
-			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
-			." JOIN {quiz_attempts} quiza ON quiza.uniqueid=qa.questionusageid "
-			." JOIN {quiz} quiz ON quiza.quiz=quiz.id ";
+		$query = " JOIN {question_attempts} qa ON qa.questionusageid=a.object_id "
+			."\nJOIN {quiz_attempts} quiza ON quiza.uniqueid=qa.questionusageid "
+			."\nJOIN {quiz} quiz ON quiz.id=quiza.quiz "
+			."\nJOIN {question_attempt_steps} qas ON qas.questionattemptid=qa.id ";
 		$moodlemia = moodle_marginalia::get_instance( );
 		$profile = $moodlemia->get_profile( $this->page_info->url );
 		$profile->get_tables( $query, $params );
@@ -1051,7 +1054,7 @@ class quba_annotation_url_handler extends annotation_url_handler
 
 	function get_conds( &$params, $summary )
 	{
-		$params[ 'object_type' ] = AN_OTYPE_QUBA_STEP;
+		$params[ 'object_type' ] = AN_OTYPE_QUBA;
 		$cond = "\n AND a.object_type= :object_type";
 			//."\n AND a.object_id=qas.id";
 		if ( $summary->ofuser )  {

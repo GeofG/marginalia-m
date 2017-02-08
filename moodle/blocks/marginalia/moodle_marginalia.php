@@ -37,6 +37,10 @@ require_once( $CFG->dirroot.'/blocks/marginalia/config.php' );
 require_once( ANNOTATION_DIR.'/marginalia-php/embed.php' );
 require_once( ANNOTATION_DIR.'/annotation_summary_query.php' );
 
+// Do not allow annotation on question steps with these states.
+// This is a list as a string to be included in a SQL query
+define( 'AN_QUBA_IGNORE_STATES', "'notstarted', 'unprocessed', 'todo', 'invalid', 'complete'" );
+
 // The smartquote icon symbol(s)
 define( 'AN_SMARTQUOTEICON', '\u275d' );	// \u275b\u275c: enclosed single qs, 267a: recycle
 
@@ -78,7 +82,7 @@ define ( 'AN_OTYPE_DISCUSSION', 3 );
 define ( 'AN_OTYPE_FORUM', 4);
 define ( 'AN_OTYPE_USER', 5);
 define ( 'AN_OTYPE_COURSE', 6);
-define ( 'AN_OTYPE_QUBA_STEP', 7);	// Quiz answers
+define ( 'AN_OTYPE_QUBA', 7);	// Question usage by attempt
 define ( 'AN_OTYPE_QUIZ', 8);	// Quiz grading
 
 // Needed by several annotation functions - if not set, PHP will throw errors into the output
@@ -249,11 +253,18 @@ abstract class mia_page_profile
 	{
 		global $PAGE;
 		
+		// Moodle has an api for JS which discourages what I'm doing,
+		// but I simply haven't had the resources to do it their way.
+		// When I tried, only ran into roadblock after roadblock.
+		return "<script type='text/javascript'>\n//<![CDATA[\n"
+			."function moodle_marginalia_init() {\n$s\n}"
+			."$( document ).ready( moodle_marginalia_init );\n//]]>\n</script>\n";
+		/*
 		// All this rigamarole with Y is an attempt to make sure this executes
 		// last, after tinyMCE controls are initialized.  No such luck.  The
 		// code is emitted last, but tinyMCE must set up a timer, then wipe
 		// out message content.  Bleargh.
-		echo "<script type='text/javascript'>\n//<![CDATA[\n"
+		return "<script type='text/javascript'>\n//<![CDATA[\n"
 			."function moodle_marginalia_init(Y)\n{\n"
 			."Y.on('domready', function() {"
 			.$s
@@ -261,12 +272,13 @@ abstract class mia_page_profile
 			."}\n" //\n$( document ).ready( moodle_marginalia_init );\n"
 			."//]]>\n</script>\n";
 		$PAGE->requires->js_init_call( 'moodle_marginalia_init', null);
+	   */
 	}
 	
 	/**
 	 * Body JS for annotation margin
 	 */
-	public function margin_js( )
+	public function margin_js( $canAnnotateData )
 	{
 		global $CFG, $USER, $PAGE;
 		
@@ -336,7 +348,9 @@ abstract class mia_page_profile
 		$pageName = $this->page_info->page;
 		$snameDisplay = json_encode($this->nameDisplay);
 		$senableRecentFlag = $this->enableRecentFlag;
-		
+		$scanannotatedata = 'null';
+		if ( $canAnnotateData !== null )
+			$scanannotatedata = json_encode( $canAnnotateData );
 		return <<<SCRIPT
 	var moodleRoot = $swwwroot;
 	var annotationPath = $smiapath;
@@ -348,6 +362,7 @@ abstract class mia_page_profile
 			useLog: '$slogger',
 			allowAnyUserPatch: $sanypatch,
 			canAnnotate: $scanannotate,
+			canAnnotateData: $scanannotatedata,
 			nameDisplay: $snameDisplay,
 			smartquoteIcon: '$ssmartquoteicon',
 			sessionCookie: $ssessioncookie,
@@ -389,25 +404,25 @@ SCRIPT;
 		
 		$sheet = $this->get_sheet( );
 		
-		echo "<div class='discussioncontrols miacontrols clearfix'>";
-		echo "<div class='discussioncontrol nullcontrol'>&#160;</div><div class='discussioncontrol'>&#160;</div>\n";
-		echo "<select name='ansheet' class='discussioncontrol miacontrol' id='ansheet' onchange='window.moodleMarginalia.changeSheet(this,\"".$refurl."\");'>\n";
+		$html = "<div class='discussioncontrols miacontrols clearfix'>";
+		$html .= "<div class='discussioncontrol nullcontrol'>&#160;</div><div class='discussioncontrol'>&#160;</div>\n";
+		$html .= "<select name='ansheet' class='discussioncontrol miacontrol' id='ansheet' onchange='window.moodleMarginalia.changeSheet(this,\"".$refurl."\");'>\n";
 
 		$selected = $sheet == AN_SHEET_NONE ? " selected='selected' " : '';
-		echo " <option $selected value='".$this->moodlemia->sheet_str(AN_SHEET_NONE,null)."'>".get_string('sheet_none', ANNOTATION_STRINGS)."</option>\n";
+		$html .= " <option $selected value='".$this->moodlemia->sheet_str(AN_SHEET_NONE,null)."'>".get_string('sheet_none', ANNOTATION_STRINGS)."</option>\n";
 
 		if ( ! isguestuser() )  {
 			$selected = $sheet == AN_SHEET_PRIVATE ? "selected='selected' " : '';
-			echo " <option $selected"
+			$html .= " <option $selected"
 				."value='".$this->moodlemia->sheet_str(AN_SHEET_PRIVATE,null)."'>".get_string('sheet_private', ANNOTATION_STRINGS)."</option>\n";
 		}
 		// Show item for all users
 		if ( true )  {
 			$selected = $sheet == AN_SHEET_PUBLIC ? "selected='selected' " : '';
-			echo " <option $selected value='".$this->moodlemia->sheet_str(AN_SHEET_PUBLIC,null)."'>".get_string('sheet_public', ANNOTATION_STRINGS)."</option>\n";
+			$html .= " <option $selected value='".$this->moodlemia->sheet_str(AN_SHEET_PUBLIC,null)."'>".get_string('sheet_public', ANNOTATION_STRINGS)."</option>\n";
 		}
-		echo "  <option disabled='disabled'>——————————</option>\n";
-		echo "  <option value='summary'>".get_string('summary_link',ANNOTATION_STRINGS)."...</option>\n";
+		$html .= "  <option disabled='disabled'>——————————</option>\n";
+		$html .= "  <option value='summary'>".get_string('summary_link',ANNOTATION_STRINGS)."...</option>\n";
 		
 		foreach ( $this->moodlemia->plugins as $plugin )
 		{
@@ -415,13 +430,14 @@ SCRIPT;
 			if ( $dropdowns )
 			{
 				foreach ( $dropdowns as $dropdown )
-					echo "<option value='".$dropdown->value."'>".s($dropdown->name)."</option>\n";
+					$html .= "<option value='".$dropdown->value."'>".s($dropdown->name)."</option>\n";
 			}
 		}
 
-		echo "  <option value='help'>".get_string('annotate_help_link',ANNOTATION_STRINGS)."...</option>\n";
-		echo "</select>\n";	
-		echo "</div>\n";
+		$html .= "  <option value='help'>".get_string('annotate_help_link',ANNOTATION_STRINGS)."...</option>\n";
+		$html .= "</select>\n";	
+		$html .= "</div>\n";
+		return $html;
 	}
 	
 	/**
@@ -462,7 +478,7 @@ SCRIPT;
 			//$output .= html_writer::end_tag( 'button' );
 			return $output;
 		}
-			return '';
+		return '';
 	}
 
 	/**
@@ -508,20 +524,13 @@ class mia_profile_quba extends mia_page_profile
 
 	public function __construct( $moodlemia, $page_info, $quiz_id, $quiza_id, $quba_id, $slot, $step )
 	{
-		parent::__construct( $moodlemia, $page_info, AN_OTYPE_QUBA_STEP, true );
+		parent::__construct( $moodlemia, $page_info, AN_OTYPE_QUBA, true );
 		$this->quiza_id = $quiza_id;
 		$this->quba_id = $quba_id;
 		$this->slot = $slot;
 		$this->step = $step;
 		$this->nameDisplay = "quoteAuthors";
 		$this->enableRecentFlag = false;
-	}
-
-	public function can_annotate( )
-	{
-		if ( $this->step === 0 )
-			return false;
-		return parent::can_annotate( );
 	}
 
 	public function emit_requires( )
@@ -532,39 +541,28 @@ class mia_profile_quba extends mia_page_profile
 	
 	public function emit_body( )
 	{
-		$s = $this->margin_js( );
-		$this->emit_init_js( $s );
-		$this->moodlemia->emit_plugin_body( );
+		$rows = $this->get_post_data( );
+		if ( $rows ) {
+			$canAnnotatateData = array( );
+			foreach ( $rows as $row ) {
+				$canAnnotateData[] = array(
+					'quiza_id' => $row->quiza_id,
+					'qa_id' => $row->qa_id,
+					'quba_id' => $row->quba_id,
+					'slot' => $row->slot,
+					'step' => $row->step );
+			}
+			$s = $this->margin_js( $canAnnotateData );
+			return $this->emit_init_js( $s )
+				. $this->moodlemia->emit_plugin_body( );
+		}
 	}
 
 	public function get_tables( &$query, &$params )
-	{
-		/* Do not use: always associate with step sequence 1 instead
-		 * and show annotations with all subsequent steps
-		// If unspecified, get last step
-		if ( $this->step === null)
-		{
-			$query .= " LEFT OUTER JOIN {question_attempt_steps} qas2 "
-				. " ON qas2.questionattemptid=qa.id "
-				. "  AND qas.sequencenumber < qas2.sequencenumber ";
-		}
-		*/
-	}
+	{ }
 	
 	public function get_conds( &$query, &$params )
 	{
-		/* Do not use: always associate with step sequence 1 instead
-		 * and show annotations with all subsequent steps
-		// If unspecified, filter outer join for max step value
-		if ( $this->step === null)
-			$query .= "  AND qas2.id IS NULL";
-		else
-		{
-			// Annotations from previous steps also included
-			$query .= " AND qas.sequencenumber=:step ";
-			$params[ 'step' ] = $this->step;
-		}
-		*/
 		if ( $this->quiz_id !== null )
 		{
 			$query .= " AND quiz.id=:quiz_id";
@@ -585,42 +583,41 @@ class mia_profile_quba extends mia_page_profile
 			$query .= " AND quiza.id=:quiza_id";
 			$params[ 'quiza_id' ] = $this->quiza_id;
 		}
-		// Don't want to annotate when step sequence=0 because then the
-		// answer is blank, so annotations will show errors. The actual
-		// meaning of the sequence number is in qas.state, a string, which
-		// isn't terribly helpful because there's a sequence. Also, the
-		// front-end JS needs an easy way to know whether to allow
-		// annotation. Simplest solution is to always take the qas for 
-		// step 1 regardless of what step the user is looking at.
-		$query .= ' AND qas.sequencenumber = 1';
+		$query .= " AND qas.state NOT IN (".AN_QUBA_IGNORE_STATES.") ";
 	}
 
 	public function get_object_id( )
 	{
-		// Find question attempt step ID, which is a single number identifying
-		// the annotated text.
+		// Find question usage by attempt ID (quba_id), a single number identifying
+		// this attempt. Meaning it is only valid for complete attempts, where the
+		// student is no longer making changes.
 		$params = array( );
-		$query = "SELECT qas.id AS 'id' "
+		$query = "SELECT qa.questionusageid AS 'id' "
 			. " FROM {question_attempt_steps} qas "
 			. " JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
 			. " JOIN {question_usage} quba ON quba.id=qa.questionusageid "
 			. " JOIN {quiz_attempts} quiza ON quiza.uniqueid=quba.id ";
 		$this->get_tables( $query, $params );
-		$query .= ' WHERE 1=1 ';
+		// It's ugly putting these conditions here, but mucking with the Moodle
+		// API is uglier.
+		$query .= " WHERE 1=1 ";
 		$this->get_conds( $query, $params );
 		$resultset = $DB->get_record_sql( $query, $params );
 		return ( $resultset && count( $resultset ) != 0 ) 
 			? $resultset->id : null;
 	}
 
-	/** Get data about annotated document (attempt): author, title, and course id */
-	public function get_create_data( $annotation_record )
+	/** Returns one row for each step not in AN_QUBA_IGNORE_STATES */
+	public function get_post_data( )
 	{
 		global $DB;
 
 		$params = array( );
-		$query = "SELECT qas.id AS object_id, quiz.course as course, "
-			." quiza.userid as quote_author_id, q.name as quote_title "
+		$query = "SELECT qas.id AS step_id, qa.questionusageid AS object_id, "
+			." quiz.course as course, "
+			." quiza.userid as quote_author_id, q.name as quote_title, "
+			." quiza.id AS quiza_id, qa.id AS qa_id, qa.slot AS slot, "
+			." qa.questionusageid AS quba_id, qas.sequencenumber AS step "
 			." FROM {question_attempt_steps} qas "
 			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
 			." JOIN {quiz_attempts} quiza ON quiza.uniqueid=qa.questionusageid "
@@ -628,16 +625,31 @@ class mia_profile_quba extends mia_page_profile
 			." JOIN {question} q ON q.id=slots.questionid "
 			." JOIN {quiz} quiz ON quiza.quiz=quiz.id AND quiz.id=slots.quizid ";
 		$this->get_tables( $query, $params );
-		$query .= ' WHERE 1=1 ';
+		$query .= " WHERE 1=1 ";
 		$this->get_conds( $query, $params );
-		$resultset = $DB->get_record_sql( $query, $params );
-		if ( $resultset && count ( $resultset ) != 0 )  {
-			$annotation_record->object_type = AN_OTYPE_QUBA_STEP;
-			$annotation_record->object_id = (int) $resultset->object_id;
-			$annotation_record->quote_author_id = (int)$resultset->quote_author_id;
-			$annotation_record->quote_title = $resultset->quote_title;
-			$annotation_record->course = (int) $resultset->course;
-			return true;
+		$resultset = $DB->get_records_sql( $query, $params );
+		if ( $resultset && count( $resultset ) != 0 )
+			return $resultset;
+		echo "NO RESULT";
+		return null;
+	}
+
+	/** Get data about annotated document (attempt): author, title, and course id */
+	public function get_create_data( $annotation_record )
+	{
+		$resultset = $this->get_post_data( $annotation_record );
+		if ( $resultset )
+		{
+			// Do once only for the first one
+			foreach ( $resultset as $r ) {
+				// May have multiple rows, but the first will do
+				$annotation_record->object_type = AN_OTYPE_QUBA;
+				$annotation_record->object_id = (int) $r->object_id;
+				$annotation_record->quote_author_id = (int)$r->quote_author_id;
+				$annotation_record->quote_title = $r->quote_title;
+				$annotation_record->course = (int) $r->course;
+				return true;
+			}
 		}
 		return false;
 	}
@@ -664,8 +676,9 @@ class mia_profile_forum_display extends mia_page_profile
 	{
 		$s = $this->margin_js( );
 		$s .= $this->quote_publish_js( );
-		$this->emit_init_js( $s );
-		$this->moodlemia->emit_plugin_body( );
+		$r = $this->emit_init_js( $s );
+		$r .= $this->moodlemia->emit_plugin_body( );
+		return $r;
 	}
 	
 	public function get_object_id( )
@@ -750,8 +763,9 @@ class mia_profile_forum_compose extends mia_page_profile
 		$s = $this->margin_js( );
 		$s .= $this->quote_publish_js( );
 		$s .= $this->quote_subscribe_js( 'id_message' );
-		$this->emit_init_js( $s );
-		$this->moodlemia->emit_plugin_body( );
+		$r = $this->emit_init_js( $s );
+		$r .= $this->moodlemia->emit_plugin_body( );
+		return $r;
 	}
 	
 	public function get_object_id( )
@@ -789,8 +803,9 @@ class mia_profile_js extends mia_page_profile
 	{
 		$s = $this->quote_publish_js( );
 		$s .= $this->quote_subscribe_js( 'id_message' );
-		$this->emit_init_js( $s );
-		$this->moodlemia->emit_plugin_body( );
+		$r = $this->emit_init_js( $s );
+		$r .= $this->moodlemia->emit_plugin_body( );
+		return $r;
 	}
 }
 
@@ -820,8 +835,8 @@ class mia_page_info
 					break;
 				case 'quiz/question_attempt':
 					$this->page = '/blocks/marginalia/quiz/question_attempt';
-					$this->object_type = AN_OTYPE_QUBA_STEP;
-					$this->params['attempt'] = (int) $params['attempt'];
+					$this->object_type = AN_OTYPE_QUBA;
+					$this->params['quba_id'] = (int) $params['quba_id'];
 					$this->params['slot'] = (int) $params['slot'];
 					break;
 				default:
@@ -867,25 +882,25 @@ class mia_page_info
 			switch ( $matches[ 1 ] ) {
 				case 'report.php':
 					$this->page = '/mod/quiz/report';
-					$this->object_type = AN_OTYPE_QUBA_STEP;
+					$this->object_type = AN_OTYPE_QUBA;
 					// I think this ID is the course module ID
 					$this->params['cm'] = (int) $params['id'];
-					$this->params['slot'] = (int) $params['slot'];
+					//$this->params['slot'] = (int) $params['slot'];
 					break;
 				case 'review.php':
 					$this->page = '/mod/quiz/review';
-					$this->object_type = AN_OTYPE_QUBA_STEP;
+					$this->object_type = AN_OTYPE_QUBA;
 					$this->params['attempt'] = (int) $params['attempt'];
 					break;
 				case 'reviewquestion.php':
 					$this->page = '/mod/quiz/reviewquestion';
-					$this->object_type = AN_OTYPE_QUBA_STEP;
+					$this->object_type = AN_OTYPE_QUBA;
 					$this->params['attempt'] = (int) $params['attempt'];
 					$this->params['slot'] = (int) $params['slot'];
 					break;
 				case 'comment.php':
 					$this->page = '/mod/quiz/comment';
-					$this->object_type = AN_OTYPE_QUBA_STEP;
+					$this->object_type = AN_OTYPE_QUBA;
 					$this->params['attempt'] = (int) $params['attempt'];
 					$this->params['slot'] = (int) $params['slot'];
 					break;
@@ -971,6 +986,7 @@ class moodle_marginalia
 				$quiz_id = null;
 				if ( isset( $params[ 'id' ] ) )
 				{
+					$id = (int) $params[ 'id' ];
 					$cm = get_coursemodule_from_id( 'quiz', $id );
 					$quiz_id = (int) $cm->instance;
 				}
@@ -989,19 +1005,15 @@ class moodle_marginalia
 				$step = null;
 				if ( isset( $params[ 'step' ] ) )
 					$step = (int) $params[ 'step' ];
-				// If step value is zero, switch off annotation entirely
-				if ( $step === 0 )
-					return null;
-				else
-					return new mia_profile_quba( $this, $info,
-						null, $quiza_id, null, $slot, null);
+				return new mia_profile_quba( $this, $info,
+					null, $quiza_id, null, $slot, $step);
 			// Used internally:
 			case '/blocks/marginalia/quiz/question_attempt':
 				$step = null;
 				//if ( isset( $params[ 'step' ] ) )
 				//	$step = (int) $params[ 'step' ];
 				return new mia_profile_quba( $this, $info, null, null, 
-					(int) $params[ 'attempt' ], (int) $params[ 'slot' ], $step );
+					(int) $params[ 'quba_id' ], (int) $params[ 'slot' ], null );
 			// Course:
 			case '/course/view':
 				return new mia_profile_course( $this, $info, (int) $params[ 'id' ]);
@@ -1384,9 +1396,9 @@ class moodle_marginalia
 		// Quiz annotations are unreachable once attempt quiz is deleted,
 		// as they are not included on the summary page.
 		$query = 'SELECT m.id FROM {marginalia} m'
-			.' LEFT OUTER JOIN {question_attempt_steps} qas ON m.object_id=qas.id'
+			.' LEFT OUTER JOIN {question_attempts} qa ON m.object_id=qa.questionusageid'
 			.' WHERE m.object_type=:object_type AND qas.id IS NULL';
-		$params = array('object_type' => AN_OTYPE_QUBA_STEP);
+		$params = array('object_type' => AN_OTYPE_QUBA);
 		$result = $DB->get_records_sql($query, $params);
 		$DB->delete_records_list('marginalia', 'id', array_keys($result));
 

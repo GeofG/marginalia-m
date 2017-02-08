@@ -44,6 +44,7 @@ function MoodleMarginalia( annotationPath, url, moodleRoot, userId, prefs, param
 	this.handlers = params.handlers;
 	this.smartquoteService = params.smartquoteService;
 	this.canAnnotate = params.canAnnotate;
+	this.canAnnotateData = params.canAnnotateData;
 	this.nameDisplay = params.nameDisplay;
 	this.enableRecentFlag = params.enableRecentFlag;
 	LocalizedAnnotationStrings = params.strings;
@@ -97,7 +98,7 @@ function MoodleMarginalia( annotationPath, url, moodleRoot, userId, prefs, param
  * no URLs indexed on question_attempt ID. But that's what I
  * need, so that's what I use.
 */
-MoodleMarginalia.getQuestionAttemptUrl = function( root )
+MoodleMarginalia.getQuestionAttemptPostFields = function( root )
 {
 	var inputs = $( "input[type='hidden']", root );
 	for ( var i = 0; i < inputs.length; ++i )
@@ -110,14 +111,18 @@ MoodleMarginalia.getQuestionAttemptUrl = function( root )
 			var attempt = parseInt( m[ 1 ] );
 			var slot = parseInt( m[ 2 ] );
 			var step = parseInt( $( node ).val( ) ) - 1;
-			return '/blocks/marginalia/quiz/question_attempt?attempt=' + attempt
-				+ '&slot=' + slot;
-			// Don't use step. Internally always associate with step 1.
-			// Better solution might be to associate with quba instead,
-			// but would then lose the flexibility of being able to specify
-			// a step if my interpretation of Moodle turns out to be wrong.
-			// + '&step=' + step;
+			return { 'quba_id': attempt, 'slot': slot, 'step': step };
 		}
+	}
+	return null;
+}
+MoodleMarginalia.getQuestionAttemptUrl = function( root )
+{
+	var fields = MoodleMarginalia.getQuestionAttemptPostFields( root );
+	if ( fields )
+	{
+		return '/blocks/marginalia/quiz/question_attempt?quba_id=' + fields.quba_id
+			+ '&slot=' + fields.slot;
 	}
 	return null;
 }
@@ -138,7 +143,7 @@ function parseMiaQubaUrl( url )
 	if ( params[ 'step' ] )
 		step = parseInt( params[ 'step' ] );
 	return {
-		'attempt': parseInt( params[ 'attempt' ] ),
+		'quba_id': parseInt( params[ 'quba_id' ] ),
 		'slot': parseInt( params[ 'slot' ] ),
 		'step': step
 	}
@@ -151,40 +156,41 @@ function parseMiaQubaUrl( url )
  * An annotation URL matches a post URL if attempt and slot are the same,
  * and the step on the post equal to or greater than the step for the
  * annotation 
+ * 
+ * Outer function curries inner with a list of information identifying
+ * which posts are annotatable.
  */
-function moodlePostFinder( mia, posts )
+function QubaPostFinder( canAnnotateData )
 {
-	this.marginalia = mia;
-	// Build an index on post URLs without steps
-	var stepPosts = { };
-	var prefix = '/blocks/marginalia/quiz/question/question_attempt?';
-	console.log( "Index " + posts.length + ' posts ');
-	for ( var i = 0; i < posts.length; ++i )
+	// Make a hash listing annotatable posts
+	// These may not exist. They are what the server expects may be on the page.
+	this.okPosts = {};
+	for ( var i = 0; i < canAnnotateData.length; ++i )
 	{
-		var url = posts[ i ].getUrl( this.marginalia.baseUrl );
-		var parsed = parseMiaQubaUrl( url );
-		parsed.post = posts[ i ];
-		var key = parsed.attempt + ':' + parsed.slot;
-		if ( ! stepPosts[ key ] )
-			stepPosts[ key ] = [];
-		stepPosts[ key ].push( parsed );
+		var d = canAnnotateData[ i ];
+		this.okPosts[ d.quba_id + ':' + d.slot + ':' + d.step ] = d;
 	}
+}
 
-	return function( url )
+QubaPostFinder.prototype.listPosts = function( marginalia, root, selector )
+{
+	var prefix = '/blocks/marginalia/quiz/question/question_attempt?';
+	var possiblePosts = selector.nodes( root );
+	var posts = [];
+	for ( var i = 0; i < possiblePosts.length; ++i )
 	{
-		console.log( "Find post url="+url );
-		var parsed = parseMiaQubaUrl( url );
-		var key = parsed.attempt + ':' + parsed.slot;
-		var posts = stepPosts[ key ];
-		if ( ! posts )
-			return null;
-		for ( var i = 0; i < posts.length; ++i )
-		{
-			if ( posts[ i ].step >= parsed.step )
-				return posts[ i ].post;
-		}
-		return null;
+		var p = possiblePosts[ i ];
+		var fields = MoodleMarginalia.getQuestionAttemptPostFields( p );
+		var key = fields.quba_id + ':' + fields.slot + ':' + fields.step;
+		if ( this.okPosts[ key ] )
+			posts.push( p );
 	}
+	return posts;
+}
+
+QubaPostFinder.prototype.find = function( marginalia, postInfos, url )
+{
+	return postInfos.getPostByUrl( url, marginalia.baseUrl );
 }
 
 /**
@@ -278,7 +284,7 @@ MoodleMarginalia.prototype.init = function( selectors )
 	//keywordService.init( null );
 	keywordService = null;	// KeywordNoteEditor is not currently implemented
 	var moodleMarginalia = this;
-	window.marginalia = new Marginalia( annotationService, this.loginUserId, this.sheet, {
+	var miaParams = {
 		preferences: this.preferences,
 		keywordService: keywordService,
 		baseUrl:  this.moodleRoot,
@@ -294,9 +300,12 @@ MoodleMarginalia.prototype.init = function( selectors )
 			link: null
 		},
 		onMarginHeight: function( post ) { moodleMarginalia.fixControlMargin( post ); },
-		selectors: selectors,
-		//postFinderFactory: moodlePostFinder
-	} );
+		selectors: selectors
+	};
+	if ( this.canAnnotateData )
+		miaParams.postFinder = new QubaPostFinder( this.canAnnotateData );
+	window.marginalia = new Marginalia( annotationService, this.loginUserId, this.sheet,
+		miaParams );
 	
 	// Ensure the sheet drop-down reflects the actual sheet to be shown
 	// This relies on preferences being saved correctly.  Otherwise, the user may

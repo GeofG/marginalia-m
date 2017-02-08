@@ -1042,7 +1042,7 @@ if (!empty($parent)) {
     $moodlemia = moodle_marginalia::get_instance( );
     $miaprofile = $moodlemia->get_profile( $PAGE->url->out( false ) );
     if ($miaprofile) {
-        $miaprofile->emit_body( );
+        echo $miaprofile->emit_body( );
         $miaprofile->emit_margin_controls( );
     }
     // #marginalia end

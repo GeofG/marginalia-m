@@ -34,13 +34,14 @@
  * Initially that information was integrated into individual DOM nodes (especially
  * as PostMicro objects), but because of memory leak problems I'm moving it here.
  */
-function PostPageInfo( doc, selectors )
+function PostPageInfo( marginalia, doc, selectors, postFinder )
 {
 	this.doc = doc;
 	this.posts = new Array( );
 	//this.postsById = new Object( );
 	this.postsByUrl = new Object( );
 	this.selectors = selectors;
+	this.postFinder = postFinder;
 	this.IndexPosts( doc.documentElement );
 }
 
@@ -51,7 +52,7 @@ function PostPageInfo( doc, selectors )
  * as I don't expect more than one to exist - but just in case, it's there.
  */
 PostPageInfo.cachedPostPageInfos = [ ];
-PostPageInfo.getPostPageInfo = function( doc, selectors )
+PostPageInfo.getPostPageInfo = function( marginalia, doc, selectors, postFinder )
 {
 	var info;
 	for ( var i = 0;  i < PostPageInfo.cachedPostPageInfos.length; ++i )
@@ -60,14 +61,15 @@ PostPageInfo.getPostPageInfo = function( doc, selectors )
 		if ( info.doc == doc && info.selectors == selectors)
 			return info;
 	}
-	info = new PostPageInfo( doc, selectors );
+	info = new PostPageInfo( marginalia, doc, selectors, postFinder );
 	PostPageInfo.cachedPostPageInfos.push( info );
 	return info;
 }
 
 PostPageInfo.prototype.IndexPosts = function( root )
 {
-	var posts = this.selectors[ 'post' ].nodes( root );
+	var posts = this.postFinder.listPosts( this.marginalia, root, this.selectors[ 'post' ] );
+		//posts = this.selectors[ 'post' ].nodes( root );
 	for ( var i = 0;  i < posts.length;  ++i )
 	{
 		var postElement = posts[ i ];
@@ -80,13 +82,6 @@ PostPageInfo.prototype.IndexPosts = function( root )
 		postElement[ Marginalia.F_POST ] = post;
 	}
 }
-
-/*
-PostPageInfo.prototype.getPostById = function( id )
-{
-	return this.postsById[ id ];
-}
-*/
 
 /**
  * Get a post that is the parent of a given element

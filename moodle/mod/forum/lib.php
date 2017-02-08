@@ -5605,8 +5605,8 @@ function forum_print_discussion($course, $cm, $forum, $discussion, $post, $mode,
 		$moodlemia = moodle_marginalia::get_instance( );
 		$miaprofile = $moodlemia->get_profile( $PAGE->url->out( false ) );
 		if ($miaprofile) {
-			$miaprofile->emit_body( $moodlemia );
-			$miaprofile->emit_margin_controls( $moodlemia );
+			echo $miaprofile->emit_body( $moodlemia );
+			echo $miaprofile->emit_margin_controls( $moodlemia );
 		}
 	// #marginalia end
 
