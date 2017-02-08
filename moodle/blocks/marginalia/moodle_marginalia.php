@@ -1397,7 +1397,7 @@ class moodle_marginalia
 		// as they are not included on the summary page.
 		$query = 'SELECT m.id FROM {marginalia} m'
 			.' LEFT OUTER JOIN {question_attempts} qa ON m.object_id=qa.questionusageid'
-			.' WHERE m.object_type=:object_type AND qas.id IS NULL';
+			.' WHERE m.object_type=:object_type AND qa.id IS NULL';
 		$params = array('object_type' => AN_OTYPE_QUBA);
 		$result = $DB->get_records_sql($query, $params);
 		$DB->delete_records_list('marginalia', 'id', array_keys($result));
