@@ -264,9 +264,26 @@ MoodleMarginalia.prototype.onload = function( pageName )
 			 * review.php?attempt=9 q10:1_:sequencecheck
 			 * reviewquestion.php?attempt=9&Gslot=1 q10:1_:sequencecheck
 			 */
-			// Add annotation margins
-			$( '.que.essay .ablock .answer div' ).before(
-				'<ol class="mia_margin"><li class="mia_dummyfirst"></li></ol>');
+			// Add annotation margins - ONLY to posts that match canAnnotateData
+			// (otherwise end up with vestigal non-functional margins for non-final steps)
+			var qs = $( '.que.essay' );
+			var byFields = {};
+			for ( var i = 0; i < this.canAnnotateData.length; ++i )
+			{
+				var c = this.canAnnotateData[ i ];
+				var key = c.quba_id + ':' + c.slot + ':' + c.step;
+				byFields[ key ] = true;
+			}
+			for ( i = 0; i < qs.length; i++ )
+		  	{
+				var q = qs[ i ] ;
+				var fields = MoodleMarginalia.getQuestionAttemptPostFields( q );
+				var key = fields.quba_id + ':' + fields.slot + ':' + fields.step;
+				if ( byFields[ key ] ) {
+					$( '.ablock .answer div', q ).before(
+						'<ol class="mia_margin"><li class="mia_dummyfirst"></li></ol>');
+				}
+			}
 			$( 'body' ).addClass( 'mia_annotated' );
 			this.init(selectors);
 			break;
