@@ -105,7 +105,7 @@ $report->display($quiz, $cm, $course);
 
 // #marginalia begin
 if ($miaprofile) {
-    $miaprofile->emit_body( $moodlemia );
+    echo $miaprofile->emit_body( $moodlemia );
 }
 // #marginalia end
 
