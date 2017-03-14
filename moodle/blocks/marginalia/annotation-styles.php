@@ -191,6 +191,13 @@ body.mia_annotated button#hide-all-annotations {
 @media print
 {
 	.forumpost em.mia_annotation {
-		text-decoration: underline ;
+		text-decoration-line: underline ;
+		text-decoration-style: dotted;
+	}
+	.forumpost em.mia_annotation em.mia_annotation {
+		text-decoration-style: solid ;
+	}
+	.forumpost em.mia_annotation em.mia_annotation em.mia_annotation {
+		text-decoration-style: double;
 	}
 }
