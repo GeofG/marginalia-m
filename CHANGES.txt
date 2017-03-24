@@ -11,6 +11,17 @@ version, but some older release notes refer to it. Most bug fixes and
 enhancements for the stand-alone version apply to the subsequent Moodle 
 version release.
 
+2017-03-24
+
+Add inline summary beneath essay questions on the review.php page. These are
+usesful when printing paper copies of feedback to students, as otherwise
+highlight overlaps are not clear. This version also uses varying underline
+thicknesses for highlight overlaps when printing.
+
+The inline summary can be switched off with the AN_INLINESUMMARY flag in
+blocks/marginalia/config.php.
+
+
 2017-01-29
 
 Add annotation support to quiz essay questions. Only users with grading

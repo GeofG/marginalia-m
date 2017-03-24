@@ -82,6 +82,9 @@ function Marginalia( service, loginUserId, sheet, features )
 	this.nameDisplay = "everyone";
 	this.postFinder = new DefaultPostFinder( this );
 	
+	this.handlers = {
+	};
+
 	this.selectors = {
 		post: new Selector( '.hentry', '.hentry .hentry' ),
 		post_content: new Selector( '.entry-content', '.entry-content .entry-content' ),
@@ -269,6 +272,47 @@ function Marginalia( service, loginUserId, sheet, features )
 	}
 }
 
+/**
+ * Events:
+ * load - annotations loaded from server
+ * marginchange - a change in the margin
+ */
+Marginalia.prototype.addEventListener = function( type, func )
+{
+	if ( this.handlers[ type ] )
+		this.handlers[ type ].push( func );
+	else
+		this.handlers[ type ] = [ func ];
+}
+
+Marginalia.prototype.removeEventListener = function( type, func )
+{
+	if ( this.handlers[ type ] )
+	{
+		for ( var i = 0; i < this.handlers[ type ].length; ++i )
+		{
+			if ( this.handlers[ type ][ i ] == func )
+				this.handlers[ type ].splice( i, 1 );
+		}
+	}
+}
+
+Marginalia.prototype.dispatchEvent = function( e )
+{
+	if ( this.handlers[ e.type ] )
+	{
+		for ( var i = 0; i < this.handlers[ e.type ].length; ++i )
+			this.handlers[ e.type ][ i ]( e );
+	}
+}
+
+function MarginaliaEvent( type, annotation, post )
+{
+	this.type = type;
+	this.annotation = annotation;
+	this.post = post;
+}
+
 // Recorded in every annotation created by this client
 Marginalia.VERSION = 2;
 
@@ -385,11 +429,8 @@ Marginalia.prototype.listPosts = function( )
 	if ( ! this.posts )
 	{
 		this.posts = PostPageInfo.getPostPageInfo( this, document, this.selectors, this.postFinder );
-		console.log( "Got the posts..." );
-		for ( var i = 0;  i < this.posts.posts.length;  ++i ) {
-			console.log( "init margin");
+		for ( var i = 0;  i < this.posts.posts.length;  ++i )
 			this.posts.posts[ i ].initMargin( this );
-		}
 	}
 	return this.posts;
 }
@@ -618,6 +659,8 @@ Marginalia.prototype.coopLoadAnnotations = function( postFinder, posts )
 			if ( node )
 				domutil.scrollWindowToNode( node, domutil.SCROLL_POS_CENTER );
 		}
+
+		this.dispatchEvent( new MarginaliaEvent( 'load' ) );
 	}
 }
 
@@ -819,7 +862,10 @@ PostMicro.prototype.addAnnotation = function( marginalia, annotation, nextNode, 
 	if ( editor )
 		r = this.showNoteEditor( marginalia, annotation, editor, nextNode );
 	else
+	{
 		r = this.showNote( marginalia, annotation, nextNode );
+		marginalia.dispatchEvent( new MarginaliaEvent( 'addAnnotation', annotation, this ) );
+	}
 	// Reposition any following notes that need it
 	this.repositionSubsequentNotes( marginalia, nextNode );
 	return quoteFound;
@@ -856,10 +902,12 @@ PostMicro.prototype.removeAnnotations = function( marginalia )
 	var annotations = new Array( );
 	while ( null != child )
 	{
-		if ( child[ Marginalia.F_ANNOTATION ] )
+		var annotation = child[ Marginalia.F_ANNOTATION ];
+		if ( annotation )
 		{
-			annotations[ annotations.length ] = child[ Marginalia.F_ANNOTATION ];
+			annotations[ annotations.length ] = annotation;
 			child[ Marginalia.F_ANNOTATION ] = null;
+			marginalia.dispatchEvent( new MarginaliaEvent( 'removeAnnotation', annotation, this ) );
 		}
 		notesElement.removeChild( child );
 		child = notesElement.firstChild;
@@ -879,6 +927,7 @@ PostMicro.prototype.removeAnnotation = function( marginalia, annotation )
 {
 	var next = this.removeNote( marginalia, annotation );
 	this.removeHighlight( marginalia, annotation );
+	marginalia.dispatchEvent( new MarginaliaEvent( 'removeAnnotation', annotation, this ) );
 
 	// Reposition markers if necessary
 //	if ( 'edit' == annotation.action )
@@ -1084,10 +1133,14 @@ PostMicro.prototype.saveAnnotation = function( marginalia, annotation )
 		// ^ author name is usually ignored, as the server will know from the ID
 		//   but conceivably there might be systems where this is not so
 		marginalia.createAnnotation( annotation, ok, fail );
+		marginalia.dispatchEvent( new MarginaliaEvent( 'addAnnotation', annotation, this ) );
 	}
 	// The annotation already exists and needs to be updated
 	else
+	{
 		marginalia.updateAnnotation( annotation, null );
+		marginalia.dispatchEvent( new MarginaliaEvent( 'updateAnnotation', annotation, this ) );
+	}
 	
 	// ---- Redraw the note ----
 	// Update the link hover (if present)

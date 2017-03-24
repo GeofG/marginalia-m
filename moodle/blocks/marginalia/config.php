@@ -34,4 +34,6 @@ define( 'AN_SUMMARYHEADINGSTOP', false );
 // hate thee.)
 define( 'AN_DBFIXBACKSLASHES', true );
 
-?>
+// Show an inline summary of annotations on the quiz/review.php page.
+define( 'AN_INLINESUMMARY', true );
+

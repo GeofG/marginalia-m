@@ -331,6 +331,7 @@ abstract class mia_page_profile
 		
 		// The whole thing will be dumped in a CDATA section, so json escape it all
 		// These variable names are prefixed with "s" for "safe" (JS safe in this case)
+		$spagename = json_encode( $this->page_info->page );
 		$swwwroot = json_encode($CFG->wwwroot);
 		$smiapath = json_encode(ANNOTATION_PATH);
 		$suserid = json_encode($USER->id);
@@ -345,10 +346,10 @@ abstract class mia_page_profile
 		$shelpurl = $helpurl;
 		$ssplash = 'true' == $showsplashpref ? "'".get_string('splash',ANNOTATION_STRINGS)."'" : 'null';
 		$sstrings = $this->moodlemia->strings_js( );
-		$pageName = $this->page_info->page;
 		$snameDisplay = json_encode($this->nameDisplay);
 		$senableRecentFlag = $this->enableRecentFlag;
 		$scanannotatedata = 'null';
+		$senableinlinesummary = AN_INLINESUMMARY ? 'true' : 'false';
 		if ( $canAnnotateData !== null )
 			$scanannotatedata = json_encode( $canAnnotateData );
 		return <<<SCRIPT
@@ -356,7 +357,7 @@ abstract class mia_page_profile
 	var annotationPath = $smiapath;
 	var url = $srefurl;
 	var userId = $suserid;
-	window.moodleMarginalia = new MoodleMarginalia(
+	window.moodleMarginalia = new MoodleMarginalia( $spagename,
 		annotationPath, url, moodleRoot, userId, $sprefs, {
 			useSmartquote: $susesmartquote,
 			useLog: '$slogger',
@@ -366,6 +367,7 @@ abstract class mia_page_profile
 			nameDisplay: $snameDisplay,
 			smartquoteIcon: '$ssmartquoteicon',
 			sessionCookie: $ssessioncookie,
+			enableInlineSummary: $senableinlinesummary,
 			onKeyCreate: true,
 			handlers: {
 				summary: function() { window.location = $ssummaryurl; },
@@ -375,7 +377,7 @@ abstract class mia_page_profile
 			, strings: $sstrings
 		}
 	);
-	window.moodleMarginalia.onload( '$pageName' );
+	window.moodleMarginalia.onload( );
 SCRIPT;
 	}
 	

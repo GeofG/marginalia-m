@@ -188,16 +188,39 @@ body.mia_annotated button#hide-all-annotations {
 	box-sizing: border-box;
 	height: auto;	/* change here to avoid touching marginalia.css */
 }
+
+.mia_inline-summary {
+	margin: 1em 0;
+}
+
+.mia_inline-summary table {
+	width: 100%;
+}
+
+.mia_inline-summary td {
+	width: 50%;
+}
+
 @media print
 {
-	.forumpost em.mia_annotation {
-		text-decoration-line: underline ;
-		text-decoration-style: dotted;
+	em.mia_annotation {
+		border-bottom: solid 1pt #444;
+		xtext-decoration-line: underline ;
+		xtext-decoration-style: dotted;
 	}
-	.forumpost em.mia_annotation em.mia_annotation {
-		text-decoration-style: solid ;
+	em.mia_annotation em.mia_annotation {
+		border-bottom: solid 2pt #333;
+		xtext-decoration-style: solid ;
 	}
-	.forumpost em.mia_annotation em.mia_annotation em.mia_annotation {
-		text-decoration-style: double;
+	em.mia_annotation em.mia_annotation em.mia_annotation {
+		border-bottom: solid 3pt #222;
+		xtext-decoration-style: double;
 	}
-}
+	em.mia_annotation em.mia_annotation em.mia_annotation em.mia_annotation {
+		border-bottom: solid 4pt #111;
+		xtext-decoration-style: double;
+	}
+	em.mia_annotation em.mia_annotation em.mia_annotation em.mia_annotation em.mia_annotation {
+		border-bottom: solid 5pt #000;
+		xtext-decoration-style: double;
+	}

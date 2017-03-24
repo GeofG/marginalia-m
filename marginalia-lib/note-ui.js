@@ -83,6 +83,8 @@ PostMicro.prototype.initMargin = function( marginalia )
 			marginalia.cachedSelection = null;
 		};
 	}
+	else
+		$( margin ).addClass( 'mia_not_annotatable' );
 }
 
 
@@ -214,6 +216,7 @@ PostMicro.prototype.showNoteElement = function( marginalia, annotation, nextNode
 			className:  className,
 			title: ' ' } );
 		noteElement[ Marginalia.F_ANNOTATION ] = annotation;
+		noteElement[ Marginalia.F_POST ] = this;
 
 		// Align the note (takes no account of subsequent notes, which is OK because this note
 		// hasn't yet been filled out)

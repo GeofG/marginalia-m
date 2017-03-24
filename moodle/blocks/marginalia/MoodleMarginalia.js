@@ -26,8 +26,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-function MoodleMarginalia( annotationPath, url, moodleRoot, userId, prefs, params )
+function MoodleMarginalia( pageName, annotationPath, url, moodleRoot, userId, prefs, params )
 {
+	this.pageName = pageName;
 	this.annotationPath = annotationPath;
 	this.url = url;
 	this.moodleRoot = moodleRoot;
@@ -47,6 +48,7 @@ function MoodleMarginalia( annotationPath, url, moodleRoot, userId, prefs, param
 	this.canAnnotateData = params.canAnnotateData;
 	this.nameDisplay = params.nameDisplay;
 	this.enableRecentFlag = params.enableRecentFlag;
+	this.enableInlineSummary = params.enableInlineSummary;
 	LocalizedAnnotationStrings = params.strings;
 
 	var urlFunc = function( node )
@@ -201,7 +203,7 @@ QubaPostFinder.prototype.find = function( marginalia, postInfos, url )
  * minimizes the number of patches that need to be applied to existing Moodle
  * code.
  */
-MoodleMarginalia.prototype.onload = function( pageName )
+MoodleMarginalia.prototype.onload = function( )
 {
 	//console.log('page name: ' + pageName );
 	initLogging();
@@ -218,7 +220,7 @@ MoodleMarginalia.prototype.onload = function( pageName )
 	var x = window.location.href.indexOf( '#' );
 	var base = -1 == x ? window.location.href : window.location.href.substr( 0, x );
 	// first check for forum annotations
-	switch ( pageName ) {
+	switch ( this.pageName ) {
 		case '/mod/forum/discuss':
 		case '/mod/forum/post':
 		case '/mod/forum/view':
@@ -323,6 +325,14 @@ MoodleMarginalia.prototype.init = function( selectors )
 		miaParams.postFinder = new QubaPostFinder( this.canAnnotateData );
 	window.marginalia = new Marginalia( annotationService, this.loginUserId, this.sheet,
 		miaParams );
+	var mm = this;
+	// Only the quiz review page supports inline summary
+	if ( this.pageName == '/mod/quiz/review' && this.enableInlineSummary )
+	{
+		window.marginalia.addEventListener( 'addAnnotation', ( e ) => { mm.onAddAnnotation( e ) } );
+		window.marginalia.addEventListener( 'removeAnnotation', ( e ) => { mm.onRemoveAnnotation( e ) } );
+		window.marginalia.addEventListener( 'updateAnnotation', ( e ) => { mm.onUpdateAnnotation( e ) } );
+	}
 	
 	// Ensure the sheet drop-down reflects the actual sheet to be shown
 	// This relies on preferences being saved correctly.  Otherwise, the user may
@@ -350,7 +360,7 @@ MoodleMarginalia.prototype.init = function( selectors )
 	var url = this.url;
 	if ( Marginalia.SHEET_NONE != this.sheet )	
 		window.marginalia.showAnnotations( url );
-	
+
 	// Fix all control margins
 	this.fixAllControlMargins( );
 	
@@ -385,6 +395,100 @@ MoodleMarginalia.prototype.enableSubscribeQuotes = function( name )
 	this.quoteSubscriber.subscribeMCE( name, null, null );
 }
 
+MoodleMarginalia.C_INLINE_SUMMARY = Marginalia.PREFIX + 'inline-summary';
+MoodleMarginalia.prototype.getSummaryElement = function( post, autoCreate )
+{
+	var summary = post.getElement( ).getElementsByClassName( MoodleMarginalia.C_INLINE_SUMMARY );
+	if ( summary.length )
+		summary = summary[ 0 ];
+	else if ( autoCreate )
+	{
+		summary = jQuery( "<div class='" + MoodleMarginalia.C_INLINE_SUMMARY + "'><table></table></div>" )[ 0 ];
+		post.getElement( ).getElementsByClassName( 'formulation' )[ 0 ].appendChild( summary );
+	}
+	return summary;
+}
+
+MoodleMarginalia.prototype.onAddAnnotation = function ( e )
+{
+	console.log( 'onAddAnnotation' );
+	var summary = this.getSummaryElement( e.post, true );
+	var table = summary.getElementsByTagName( 'table' )[ 0 ];
+	for ( var node = table.lastElementChild; node; node = node.previousElementSibling )
+	{
+		if ( compareAnnotationRanges( node[ Marginalia.F_ANNOTATION ], e.annotation ) <= 0 )
+			break;
+	}
+	var next = node ? node.nextElementSibling : table.firstElementChild;
+	var row = jQuery( "<tr><td class='quote'></td><td class='note'></td></tr>" )[ 0 ];
+	table.insertBefore( row, next );
+	$( '.quote', row ).text( e.annotation.getQuote( ) );
+	$( '.note', row ).text( e.annotation.getNote( ) );
+	row[ Marginalia.F_ANNOTATION ] = e.annotation;
+	row[ Marginalia.F_POST ] = e.post;
+}
+
+MoodleMarginalia.prototype.onUpdateAnnotation = function( e )
+{
+	this.onRemoveAnnotation( e );
+	this.onAddAnnotation( e );
+}
+
+MoodleMarginalia.prototype.onRemoveAnnotation = function( e )
+{
+	console.log( 'on Remove annotation' );
+	var summary = this.getSummaryElement( e.post, false );
+	if ( summary )
+	{
+		// Linear search. Unlikely to be a problem.
+		var rows = jQuery( 'tr', summary );
+		for ( var i = 0; i < rows.length; ++i )
+		{
+			if ( rows[ i ][ Marginalia.F_ANNOTATION ].id == e.annotation.id )
+			{
+				$( rows[ i ] ).remove( );
+				break;
+			}
+		}
+	}
+}
+
+/*
+MoodleMarginalia.prototype.inlineSummary = function( marginalia, annotation, post )
+{
+	* Rather than messing with reproducing the quiz review page, this simply
+	 * looks through the DOM on that page for annotations and creates an inline
+	 * summary beneath each question answer.
+	 *
+	 * I admit it's clunky. There should be an in-memory representation of
+	 * annotations, and an easy way in Marginalia to show a different view of
+	 * them. But there isn't, so rather than complicate Marginalia further
+	 * I'm localizing this implementation here for now. *
+
+	var answers = $( '.que.essay' );
+	for ( var i = 0; i < answers.length; ++i )
+	{
+		var notes = $( '.mia_margin li', answers[ i ] );
+		var table = $( 'table', MoodleMarginalia.C_INLINE_SUMMARY )[ 0 ];
+		for ( var j = 0; j < notes.length; ++j )
+		{
+			var note = notes[ j ];
+			var annotation = note[ Marginalia.F_ANNOTATION ];
+			if ( annotation ) // ignore dummyfirst
+			{
+				var post = note[ Marginalia.F_POST ];
+				var summary = this.getSummaryElement( post );
+				var row = jQuery( "<tr><td class='quote'></td><td class='note'></td></tr>" );
+				row[ Marginalia.F_ANNOTATION ] = annotation;
+				row[ Marginalia.F_POST ] = post;
+				$( 'table', summary ).append( row );
+				$( '.quote', row ).text( annotation.getQuote( ) );
+				$( '.note', row ).text( annotation.getNote( ) );
+			}
+		}
+	}
+}
+*/
 
 MoodleMarginalia.prototype.displayNote = function( marginalia, annotation, noteElement, params, isEditing )
 {
