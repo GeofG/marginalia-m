@@ -199,6 +199,7 @@ body.mia_annotated button#hide-all-annotations {
 
 .mia_inline-summary td {
 	width: 50%;
+	vertical-align: top;
 }
 
 @media print
