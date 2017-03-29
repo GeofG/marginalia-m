@@ -198,8 +198,16 @@ body.mia_annotated button#hide-all-annotations {
 }
 
 .mia_inline-summary td {
-	width: 50%;
+	width: 40%;
 	vertical-align: top;
+}
+
+.mia_inline-summary td.annotator {
+	width: 5%:
+}
+
+.mia_inline-summary td.blank {
+	width: 15%;
 }
 
 @media print

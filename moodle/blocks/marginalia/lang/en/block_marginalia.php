@@ -99,6 +99,12 @@ $string['note_replace_button'] = 'Replace Notes';
 $string['note_update_count'] = 'Notes updated: ';
 $string['tag_list_prompt'] = 'You have used the following notes multiple times.  Click on a link to view a summary of annotations with that note.';
 
+/* Inline summary */
+$string['js_inline_summary_quote'] = 'Highlight';
+$string['js_inline_summary_note'] = 'Margin';
+$string['js_inline_summary_annotator'] = 'Grader';
+$string['js_inline_summary_blank'] = 'Notes';
+
 /* Strings used in JS front-end */
 $string['js_public_annotation'] = 'This annotation is public.';
 $string['js_private_annotation'] =  'This annotation is private.';

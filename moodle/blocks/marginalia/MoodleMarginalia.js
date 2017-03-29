@@ -329,9 +329,9 @@ MoodleMarginalia.prototype.init = function( selectors )
 	// Only the quiz review page supports inline summary
 	if ( this.pageName == '/mod/quiz/review' && this.enableInlineSummary )
 	{
-		window.marginalia.addEventListener( 'addAnnotation', ( e ) => { mm.onAddAnnotation( e ) } );
-		window.marginalia.addEventListener( 'removeAnnotation', ( e ) => { mm.onRemoveAnnotation( e ) } );
-		window.marginalia.addEventListener( 'updateAnnotation', ( e ) => { mm.onUpdateAnnotation( e ) } );
+		window.marginalia.addEventListener( 'addAnnotation', function ( e ) { mm.onAddAnnotation( e ) } );
+		window.marginalia.addEventListener( 'removeAnnotation', function ( e ) { mm.onRemoveAnnotation( e ) } );
+		window.marginalia.addEventListener( 'updateAnnotation', function ( e ) { mm.onUpdateAnnotation( e ) } );
 	}
 	
 	// Ensure the sheet drop-down reflects the actual sheet to be shown
@@ -403,8 +403,12 @@ MoodleMarginalia.prototype.getSummaryElement = function( post, autoCreate )
 		summary = summary[ 0 ];
 	else if ( autoCreate )
 	{
-		summary = jQuery( "<div class='" + MoodleMarginalia.C_INLINE_SUMMARY + "'><table></table></div>" )[ 0 ];
+		summary = jQuery( "<div class='" + MoodleMarginalia.C_INLINE_SUMMARY + "'><table><thead><tr><th class='quote'></th><th class='note'></th><th class='annotator'></th><th class='blank'></th></tr></thead><tbody></tbody></table></div>" )[ 0 ];
 		post.getElement( ).getElementsByClassName( 'formulation' )[ 0 ].appendChild( summary );
+		$( 'th.quote', summary     ).text( getLocalized( 'inline summary quote' ) );
+		$( 'th.note', summary      ).text( getLocalized( 'inline summary note' ) );
+		$( 'th.annotator', summary ).text( getLocalized( 'inline summary annotator' ) );
+		$( 'th.blank', summary     ).text( getLocalized( 'inline summary blank' ) );
 	}
 	return summary;
 }
@@ -413,17 +417,18 @@ MoodleMarginalia.prototype.onAddAnnotation = function ( e )
 {
 	console.log( 'onAddAnnotation' );
 	var summary = this.getSummaryElement( e.post, true );
-	var table = summary.getElementsByTagName( 'table' )[ 0 ];
+	var table = summary.getElementsByTagName( 'tbody' )[ 0 ];
 	for ( var node = table.lastElementChild; node; node = node.previousElementSibling )
 	{
 		if ( compareAnnotationRanges( node[ Marginalia.F_ANNOTATION ], e.annotation ) <= 0 )
 			break;
 	}
 	var next = node ? node.nextElementSibling : table.firstElementChild;
-	var row = jQuery( "<tr><td class='quote'></td><td class='note'></td></tr>" )[ 0 ];
+	var row = jQuery( "<tr><td class='quote'></td><td class='note'></td><td class='annotator'></td><td class='blank'></td></tr>" )[ 0 ];
 	table.insertBefore( row, next );
 	$( '.quote', row ).text( e.annotation.getQuote( ) );
 	$( '.note', row ).text( e.annotation.getNote( ) );
+	$( '.annotator', row).text( e.annotation.getUserName( ) );
 	row[ Marginalia.F_ANNOTATION ] = e.annotation;
 	row[ Marginalia.F_POST ] = e.post;
 }
@@ -441,7 +446,7 @@ MoodleMarginalia.prototype.onRemoveAnnotation = function( e )
 	if ( summary )
 	{
 		// Linear search. Unlikely to be a problem.
-		var rows = jQuery( 'tr', summary );
+		var rows = jQuery( 'tbody tr', summary );
 		for ( var i = 0; i < rows.length; ++i )
 		{
 			if ( rows[ i ][ Marginalia.F_ANNOTATION ].id == e.annotation.id )
