@@ -519,14 +519,17 @@ class mia_profile_course extends mia_page_profile
 class mia_profile_quba extends mia_page_profile
 {
 	public $quiz_id = null;
+	public $question_id = null;
 	public $quiza_id = null;
 	public $quba_id = null;
 	public $slot = null;
 	public $step = null;
 
-	public function __construct( $moodlemia, $page_info, $quiz_id, $quiza_id, $quba_id, $slot, $step )
+	public function __construct( $moodlemia, $page_info, $quiz_id, $question_id, $quiza_id, $quba_id, $slot, $step )
 	{
 		parent::__construct( $moodlemia, $page_info, AN_OTYPE_QUBA, true );
+		$this->quiz_id = $quiz_id;
+		$this->question_id = $question_id;
 		$this->quiza_id = $quiza_id;
 		$this->quba_id = $quba_id;
 		$this->slot = $slot;
@@ -569,6 +572,11 @@ class mia_profile_quba extends mia_page_profile
 		{
 			$query .= " AND quiz.id=:quiz_id";
 			$params[ 'quiz_id' ] = $this->quiz_id;
+		}
+		if ( $this->question_id !== null )
+		{
+			$query .= " AND slots.questionid=:question_id";
+			$params[ 'question_id' ] = $this->question_id;
 		}
 		if ( $this->slot !== null )
 		{
@@ -994,12 +1002,14 @@ class moodle_marginalia
 				}
 				else
 					$quiz_id = (int) $params[ 'q' ];
+				$slot =  isset( $params[ 'slot' ] ) ? (int) $params['slot'] : null;
+				$question_id = isset( $params[ 'qid' ] ) ? (int) $params['qid'] : null;
 				return new mia_profile_quba( $this, $info, 
-					$quiz_id, null, null, null, null );
+					$quiz_id, $question_id, null, null, $slot, null );
 			case '/mod/quiz/review':	// Works for this too!
 				$quiza_id = (int) $params[ 'attempt' ];
 				return new mia_profile_quba( $this, $info, 
-					null, $quiza_id, null, null, null );
+					null, null, $quiza_id, null, null, null );
 			case '/mod/quiz/reviewquestion':
 			case '/mod/quiz/comment':
 				$quiza_id = (int) $params[ 'attempt' ];
@@ -1008,13 +1018,13 @@ class moodle_marginalia
 				if ( isset( $params[ 'step' ] ) )
 					$step = (int) $params[ 'step' ];
 				return new mia_profile_quba( $this, $info,
-					null, $quiza_id, null, $slot, $step);
+					null, null, $quiza_id, null, $slot, $step);
 			// Used internally:
 			case '/blocks/marginalia/quiz/question_attempt':
 				$step = null;
 				//if ( isset( $params[ 'step' ] ) )
 				//	$step = (int) $params[ 'step' ];
-				return new mia_profile_quba( $this, $info, null, null, 
+				return new mia_profile_quba( $this, $info, null, null, null,
 					(int) $params[ 'quba_id' ], (int) $params[ 'slot' ], null );
 			// Course:
 			case '/course/view':
