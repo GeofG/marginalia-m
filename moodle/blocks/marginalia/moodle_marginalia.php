@@ -522,17 +522,17 @@ class mia_profile_quba extends mia_page_profile
 	public $question_id = null;
 	public $quiza_id = null;
 	public $quba_id = null;
-	public $slot = null;
+	public $slots = null;
 	public $step = null;
 
-	public function __construct( $moodlemia, $page_info, $quiz_id, $question_id, $quiza_id, $quba_id, $slot, $step )
+	public function __construct( $moodlemia, $page_info, $quiz_id, $question_id, $quiza_id, $quba_id, $slots, $step )
 	{
 		parent::__construct( $moodlemia, $page_info, AN_OTYPE_QUBA, true );
 		$this->quiz_id = $quiz_id;
 		$this->question_id = $question_id;
 		$this->quiza_id = $quiza_id;
 		$this->quba_id = $quba_id;
-		$this->slot = $slot;
+		$this->slots = $slots;
 		$this->step = $step;
 		$this->nameDisplay = "quoteAuthors";
 		$this->enableRecentFlag = false;
@@ -578,10 +578,21 @@ class mia_profile_quba extends mia_page_profile
 			$query .= " AND slots.questionid=:question_id";
 			$params[ 'question_id' ] = $this->question_id;
 		}
-		if ( $this->slot !== null )
+		if ( $this->slots !== null  && count( $this->slots ) > 0 )
 		{
-			$query .= " AND qa.slot=:slot";
-			$params[ 'slot' ] = $this->slot;
+			if ( count( $this->slots ) == 1 ) {
+				$query .= " AND qa.slot=:slot";
+				$params[ 'slot' ] = $this->slots[0];
+			} else {
+				// This is because this part of the query is not parameterized, 
+				// I want to be 100% certain that an error elsewhere in the
+				// code will not allow non-integer slot values to slip through
+				// and created a security risk.
+				$slots = array( );
+				for ( $i = 0; $i < count( $this->slots ); ++$i )
+					$slots[ $i ] = (int) $this->slots[ $i ];
+				$query .= " AND qa.slot IN (" . implode(',', $slots) .")";
+			}
 		}
 		if ( $this->quba_id !== null )
 		{
@@ -593,7 +604,7 @@ class mia_profile_quba extends mia_page_profile
 			$query .= " AND quiza.id=:quiza_id";
 			$params[ 'quiza_id' ] = $this->quiza_id;
 		}
-		$query .= " AND qas.state NOT IN (".AN_QUBA_IGNORE_STATES.") ";
+		//$query .= " AND qas.state NOT IN (".AN_QUBA_IGNORE_STATES.") ";
 	}
 
 	public function get_object_id( )
@@ -602,9 +613,9 @@ class mia_profile_quba extends mia_page_profile
 		// this attempt. Meaning it is only valid for complete attempts, where the
 		// student is no longer making changes.
 		$params = array( );
-		$query = "SELECT qa.questionusageid AS 'id' "
-			. " FROM {question_attempt_steps} qas "
-			. " JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
+		$query = "SELECT qa.questionusageid AS 'id', slots.id AS 'id2' "
+			//. " FROM {question_attempt_steps} qas "
+			//. " JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
 			. " JOIN {question_usage} quba ON quba.id=qa.questionusageid "
 			. " JOIN {quiz_attempts} quiza ON quiza.uniqueid=quba.id ";
 		$this->get_tables( $query, $params );
@@ -613,7 +624,9 @@ class mia_profile_quba extends mia_page_profile
 		$query .= " WHERE 1=1 ";
 		$this->get_conds( $query, $params );
 		$resultset = $DB->get_record_sql( $query, $params );
-		return ( $resultset && count( $resultset ) != 0 ) 
+		// Maybe in future:
+		//return ( $resultset && count( $resultset ) != 0 ) 
+		return ( $resultset && count( $resultset ) != 0 )
 			? $resultset->id : null;
 	}
 
@@ -623,24 +636,32 @@ class mia_profile_quba extends mia_page_profile
 		global $DB;
 
 		$params = array( );
-		$query = "SELECT qas.id AS step_id, qa.questionusageid AS object_id, "
-			." quiz.course as course, "
+		$query = "SELECT qa.questionusageid AS object_id, "
+			." slots.id AS object_id2, quiz.course as course, "
 			." quiza.userid as quote_author_id, q.name as quote_title, "
 			." quiza.id AS quiza_id, qa.id AS qa_id, qa.slot AS slot, "
 			." qa.questionusageid AS quba_id, qas.sequencenumber AS step "
-			." FROM {question_attempt_steps} qas "
-			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
+			." FROM {question_attempts} qa "
 			." JOIN {quiz_attempts} quiza ON quiza.uniqueid=qa.questionusageid "
 			." JOIN {quiz_slots} slots ON slots.slot=qa.slot "
 			." JOIN {question} q ON q.id=slots.questionid "
-			." JOIN {quiz} quiz ON quiza.quiz=quiz.id AND quiz.id=slots.quizid ";
+			." JOIN {quiz} quiz ON quiza.quiz=quiz.id AND quiz.id=slots.quizid "
+			." JOIN {question_attempt_steps} qas ON qas.questionattemptid=qa.id "
+			."  AND qas.state NOT IN (".AN_QUBA_IGNORE_STATES.") "
+			// Want only minimum valid step value
+			." LEFT OUTER JOIN {question_attempt_steps} qas2 ON qas.id=qas2.id "
+			."  AND qas2.state NOT IN (".AN_QUBA_IGNORE_STATES.") "
+			."  AND qas.sequencenumber > qas2.sequencenumber ";
 		$this->get_tables( $query, $params );
-		$query .= " WHERE 1=1 ";
+		// Most queries do *not* return steps, in order to simplify them.
+		// This one does, as it is used to indicate which rows are annotatable.
+		// All usages with a step ID >= this one are annotatable.
+		$query .= "WHERE qas.state NOT IN (".AN_QUBA_IGNORE_STATES.")"
+			."\n AND qas2.id IS NULL ";       // <- filter outer join for maximum step value
 		$this->get_conds( $query, $params );
 		$resultset = $DB->get_records_sql( $query, $params );
 		if ( $resultset && count( $resultset ) != 0 )
 			return $resultset;
-		echo "NO RESULT";
 		return null;
 	}
 
@@ -655,6 +676,7 @@ class mia_profile_quba extends mia_page_profile
 				// May have multiple rows, but the first will do
 				$annotation_record->object_type = AN_OTYPE_QUBA;
 				$annotation_record->object_id = (int) $r->object_id;
+				$annotation_record->object_id2 = (int) $r->object_id2;
 				$annotation_record->quote_author_id = (int)$r->quote_author_id;
 				$annotation_record->quote_title = $r->quote_title;
 				$annotation_record->course = (int) $r->course;
@@ -847,7 +869,7 @@ class mia_page_info
 					$this->page = '/blocks/marginalia/quiz/question_attempt';
 					$this->object_type = AN_OTYPE_QUBA;
 					$this->params['quba_id'] = (int) $params['quba_id'];
-					$this->params['slot'] = (int) $params['slot'];
+					$this->params['slots'] = array( (int) $params['slot'] );
 					break;
 				default:
 					throw new Exception("Page URL unknown to Marginalia: ".$path);
@@ -895,7 +917,18 @@ class mia_page_info
 					$this->object_type = AN_OTYPE_QUBA;
 					// I think this ID is the course module ID
 					$this->params['cm'] = (int) $params['id'];
-					//$this->params['slot'] = (int) $params['slot'];
+					if ( isset( $params[ 'slots' ] ) ) {
+						$slots = explode( ',', $params[ 'slots' ] );
+						for ( $i = 0; $i < count($slots); ++$i )
+							$slots[ $i ] = (int) $slots[ $i ];
+						$this->params[ 'slots' ] = $slots;
+					}
+					else if ( isset( $params[ 'slot' ] ) )
+						$this->params['slots'] =  array( (int) $params['slot'] );
+					else
+						$this->params['slots'] = array( );
+					$this->params[ 'quba_id' ] = isset( $params[ 'usageid' ] ) ?
+						(int) $params[ 'usageid' ] : null;
 					break;
 				case 'review.php':
 					$this->page = '/mod/quiz/review';
@@ -906,13 +939,13 @@ class mia_page_info
 					$this->page = '/mod/quiz/reviewquestion';
 					$this->object_type = AN_OTYPE_QUBA;
 					$this->params['attempt'] = (int) $params['attempt'];
-					$this->params['slot'] = (int) $params['slot'];
+					$this->params['slots'] = array( (int) $params['slot'] );
 					break;
 				case 'comment.php':
 					$this->page = '/mod/quiz/comment';
 					$this->object_type = AN_OTYPE_QUBA;
 					$this->params['attempt'] = (int) $params['attempt'];
-					$this->params['slot'] = (int) $params['slot'];
+					$this->params['slots'] = array( (int) $params['slot'] );
 					break;
 				default:
 					throw new Exception("Page URL unknown to Marginalia: ".$path);
@@ -966,6 +999,7 @@ class moodle_marginalia
 	 */
 	public function get_profile( $url )
 	{
+		// Should take fields already parsed from info, not by re-parsing URL
 		$params = array( );
 		$query = parse_url( $url, PHP_URL_QUERY );
 		parse_str( $query, $params);
@@ -1002,10 +1036,10 @@ class moodle_marginalia
 				}
 				else
 					$quiz_id = (int) $params[ 'q' ];
-				$slot =  isset( $params[ 'slot' ] ) ? (int) $params['slot'] : null;
+				$slots = $info->params[ 'slots' ];
 				$question_id = isset( $params[ 'qid' ] ) ? (int) $params['qid'] : null;
-				return new mia_profile_quba( $this, $info, 
-					$quiz_id, $question_id, null, null, $slot, null );
+				return new mia_profile_quba( $this, $info, $quiz_id, $question_id, 
+					null, $info->params[ 'quba_id' ], $slots, null );
 			case '/mod/quiz/review':	// Works for this too!
 				$quiza_id = (int) $params[ 'attempt' ];
 				return new mia_profile_quba( $this, $info, 
@@ -1013,19 +1047,20 @@ class moodle_marginalia
 			case '/mod/quiz/reviewquestion':
 			case '/mod/quiz/comment':
 				$quiza_id = (int) $params[ 'attempt' ];
-				$slot = (int) $params[ 'slot' ];
+				$slots = array( (int) $params[ 'slot' ] );
 				$step = null;
 				if ( isset( $params[ 'step' ] ) )
 					$step = (int) $params[ 'step' ];
 				return new mia_profile_quba( $this, $info,
-					null, null, $quiza_id, null, $slot, $step);
+					null, null, $quiza_id, null, $slots, $step);
 			// Used internally:
 			case '/blocks/marginalia/quiz/question_attempt':
 				$step = null;
 				//if ( isset( $params[ 'step' ] ) )
 				//	$step = (int) $params[ 'step' ];
+				$slots = array( $params[ 'slot' ] );
 				return new mia_profile_quba( $this, $info, null, null, null,
-					(int) $params[ 'quba_id' ], (int) $params[ 'slot' ], null );
+					(int) $params[ 'quba_id' ], (int) $params[ 'slots' ], null );
 			// Course:
 			case '/course/view':
 				return new mia_profile_course( $this, $info, (int) $params[ 'id' ]);

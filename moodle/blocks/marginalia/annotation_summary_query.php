@@ -994,11 +994,10 @@ class quba_annotation_url_handler extends annotation_url_handler
 		$this->title = 'a quiz something';
 		// As the Moodle docs indicate, question_usages.id=quiz_attempts.uniqueid
 		$params = array( );
-		$query = "SELECT qas.id AS qas_id, quiza.uniqueid AS object_id, "
+		$query = "SELECT quiza.uniqueid AS object_id, slots.id AS object_id2, "
 			." quiz.course as course, quiza.userid as quote_author_id, "
 			." q.name as quote_title, quiz.id as quiz_id "
-			." FROM {question_attempt_steps} qas "
-			." JOIN {question_attempts} qa ON qas.questionattemptid=qa.id "
+			." FROM {question_attempts} qa "
 			." JOIN {quiz_attempts} quiza ON quiza.uniqueid=qa.questionusageid "
 			." JOIN {quiz_slots} slots ON slots.slot=qa.slot "
 			." JOIN {question} q ON q.id=slots.questionid "
@@ -1021,6 +1020,7 @@ class quba_annotation_url_handler extends annotation_url_handler
 		foreach ( $resultset as $r ) {
 			$this->courseid = (int) $r->course;
 			$this->object_id = (int) $r->object_id;
+			//$this->object_id2 = (int) $r->object_id2;
 			$this->modinstanceid = (int) $r->quiz_id;
 			//echo "courseid=".$this->courseid.".";
 			return true;
@@ -1035,7 +1035,8 @@ class quba_annotation_url_handler extends annotation_url_handler
 			. ",\n quiz.name AS section_name"
 			. ",\n null AS section_url"
 			. ",\n 'attempt' AS object_type"
-			. ",\n qas.id AS object_id";
+			.",\n qa.questionusageid AS object_id"
+			.",\n slots.id AS object_id2";
 	}
 
 	function get_tables( &$params )
@@ -1044,8 +1045,9 @@ class quba_annotation_url_handler extends annotation_url_handler
 		// really not interested in the annotations on it.
 		$query = " JOIN {question_attempts} qa ON qa.questionusageid=a.object_id "
 			."\nJOIN {quiz_attempts} quiza ON quiza.uniqueid=qa.questionusageid "
-			."\nJOIN {quiz} quiz ON quiz.id=quiza.quiz "
-			."\nJOIN {question_attempt_steps} qas ON qas.questionattemptid=qa.id ";
+			."\nJOIN {quiz_slots} slots ON slots.slot=qa.slot AND slots.questionid=qa.questionid "
+			."\nJOIN {quiz} quiz ON quiz.id=quiza.quiz ";
+			//."\nJOIN {question_attempt_steps} qas ON qas.questionattemptid=qa.id ";
 		$moodlemia = moodle_marginalia::get_instance( );
 		$profile = $moodlemia->get_profile( $this->page_info->url );
 		$profile->get_tables( $query, $params );

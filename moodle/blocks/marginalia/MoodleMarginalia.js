@@ -170,7 +170,9 @@ function QubaPostFinder( canAnnotateData )
 	for ( var i = 0; i < canAnnotateData.length; ++i )
 	{
 		var d = canAnnotateData[ i ];
-		this.okPosts[ d.quba_id + ':' + d.slot + ':' + d.step ] = d;
+		var key = d.quba_id + ':' + d.slot;
+		this.okPosts[ key ] = d.step ? d.step : 0;
+		console.log("canAnnotate post: " + key);
 	}
 }
 
@@ -183,9 +185,12 @@ QubaPostFinder.prototype.listPosts = function( marginalia, root, selector )
 	{
 		var p = possiblePosts[ i ];
 		var fields = MoodleMarginalia.getQuestionAttemptPostFields( p );
-		var key = fields.quba_id + ':' + fields.slot + ':' + fields.step;
-		if ( this.okPosts[ key ] )
-			posts.push( p );
+		var key = fields.quba_id + ':' + fields.slot;
+		if ( this.okPosts[ key ] ) {
+			if ( fields.step >= this.okPosts[ key ] ) {
+				posts.push( p );
+			}
+		}
 	}
 	return posts;
 }
@@ -215,7 +220,7 @@ MoodleMarginalia.prototype.onload = function( )
 		return;
 	
 	// must first figure out which kind of page is being annotated,
-	// then return the correct uRL for an individual *post*, which may
+	// then return the correct URL for an individual *post*, which may
 	// not be the same as the page as a whole (e.g. in the case of the forum).
 	var x = window.location.href.indexOf( '#' );
 	var base = -1 == x ? window.location.href : window.location.href.substr( 0, x );
@@ -296,6 +301,7 @@ MoodleMarginalia.prototype.onload = function( )
 
 MoodleMarginalia.prototype.init = function( selectors )
 {
+	var i;
 	var annotationService = new RestAnnotationService( this.annotationPath + '/annotate.php', {
 		noPutDelete: true,
 		csrfCookie: this.sessionCookie } );
@@ -341,7 +347,7 @@ MoodleMarginalia.prototype.init = function( selectors )
 	var sheetCtrl = document.getElementById( 'ansheet' );
 	if ( sheetCtrl )
 	{
-		for ( var i = 0;  i < sheetCtrl.options.length;  ++i )
+		for ( i = 0;  i < sheetCtrl.options.length;  ++i )
 		{
 			if ( sheetCtrl.options[ i ].value == this.sheet )
 			{
@@ -354,10 +360,19 @@ MoodleMarginalia.prototype.init = function( selectors )
 	// The following is actually part of the initialization routine.
 	// It enables clicking on the margin to create annotations
 	// (clickCreateAnnotation)
-	window.marginalia.listPosts( );
+	var posts = window.marginalia.listPosts( );
 	
 	// Display annotations
 	var url = this.url;
+	/*
+	// Special case for report, which is paged: list specific post URLs
+	if ( '/mod/quiz/report' == this.pageName ) {
+		var url = 
+		for ( i = 0; i < posts.length; ++i ) {
+
+		}
+	}
+	*/
 	if ( Marginalia.SHEET_NONE != this.sheet )	
 		window.marginalia.showAnnotations( url );
 
