@@ -635,8 +635,12 @@ class mia_profile_quba extends mia_page_profile
 	{
 		global $DB;
 
+		// Must select step ID as first column in result
+		// because Moodle requires a unique value for first column,
+		// otherwise results will be collapsed!
+		// (Grrr... for Pete's sake, there should be a way to do a normal query)
 		$params = array( );
-		$query = "SELECT qa.questionusageid AS object_id, "
+		$query = "SELECT qas.id as appease_moodle_gods, qa.questionusageid AS object_id, "
 			." slots.id AS object_id2, quiz.course as course, "
 			." quiza.userid as quote_author_id, q.name as quote_title, "
 			." quiza.id AS quiza_id, qa.id AS qa_id, qa.slot AS slot, "
@@ -656,10 +660,11 @@ class mia_profile_quba extends mia_page_profile
 		// Most queries do *not* return steps, in order to simplify them.
 		// This one does, as it is used to indicate which rows are annotatable.
 		// All usages with a step ID >= this one are annotatable.
-		$query .= "WHERE qas.state NOT IN (".AN_QUBA_IGNORE_STATES.")"
-			."\n AND qas2.id IS NULL ";       // <- filter outer join for maximum step value
+		$query .= "WHERE qas2.id IS NULL";       // <- filter outer join for maximum step value
 		$this->get_conds( $query, $params );
+		//$DB->set_debug(true);
 		$resultset = $DB->get_records_sql( $query, $params );
+		//$DB->set_debug(false);
 		if ( $resultset && count( $resultset ) != 0 )
 			return $resultset;
 		return null;
@@ -1060,7 +1065,7 @@ class moodle_marginalia
 				//	$step = (int) $params[ 'step' ];
 				$slots = array( $params[ 'slot' ] );
 				return new mia_profile_quba( $this, $info, null, null, null,
-					(int) $params[ 'quba_id' ], (int) $params[ 'slots' ], null );
+					(int) $params[ 'quba_id' ], $slots, null );
 			// Course:
 			case '/course/view':
 				return new mia_profile_course( $this, $info, (int) $params[ 'id' ]);

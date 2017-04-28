@@ -419,6 +419,8 @@ class annotation_summary_query
 		// use a.*.
 		$params[ 'note_author_url_base' ] = $CFG->wwwroot.'/user/view.php?id=';
 		$params[ 'quote_author_url_base' ] = $CFG->wwwroot.'/user/view.php?id=';
+		// Note: assumes that unique ID is the first column in mdl_marginalia table.
+		// Moodle requires first column in result to have a unique value for each row.
 		return ' a.* '
 			. ", r.lastread AS lastread"
 			. ", u.username AS username"
@@ -994,6 +996,8 @@ class quba_annotation_url_handler extends annotation_url_handler
 		$this->title = 'a quiz something';
 		// As the Moodle docs indicate, question_usages.id=quiz_attempts.uniqueid
 		$params = array( );
+		// Moodle requires unique value in first column for each row.
+		// Instead of mucking with that, just straight-out limit to 1 result below.
 		$query = "SELECT quiza.uniqueid AS object_id, slots.id AS object_id2, "
 			." quiz.course as course, quiza.userid as quote_author_id, "
 			." q.name as quote_title, quiz.id as quiz_id "
@@ -1009,6 +1013,7 @@ class quba_annotation_url_handler extends annotation_url_handler
 		// API is uglier.
 		$query .= " WHERE 1=1 ";
 		$profile->get_conds( $query, $params );
+		$query .= " LIMIT 1";
 		/*
 		echo "QUERY: ".$query."\n";
 		echo "Param count=".count($params).".";
