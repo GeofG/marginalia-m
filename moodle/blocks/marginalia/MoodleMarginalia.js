@@ -172,7 +172,6 @@ function QubaPostFinder( canAnnotateData )
 		var d = canAnnotateData[ i ];
 		var key = d.quba_id + ':' + d.slot;
 		this.okPosts[ key ] = d.step ? d.step : 0;
-		console.log("canAnnotate post: " + key);
 	}
 }
 
