@@ -962,7 +962,8 @@ class post_annotation_url_handler extends annotation_url_handler
 	function get_conds( &$params, $summary )
 	{
 		$params[ 'object_type' ] = AN_OTYPE_POST;
-		$cond = "\n AND a.object_type= :object_type";
+		$params[ 'object_id' ] = $this->p;
+		$cond = "\n AND a.object_type=:object_type AND a.object_id=:object_id";
 		if ( $summary->ofuser )  {
 			$params[ 'ofuserid' ] = $summary->ofuser->id;
 			$cond .= " AND a.quote_author_id= :ofuserid";
