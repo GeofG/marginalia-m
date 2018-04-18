@@ -27,11 +27,12 @@
  * $Id$
  */
 
-function Smartquote( wwwroot, selectors, extService )
+function Smartquote( wwwroot, selectors, extService, postFinder )
 {
 	this.wwwroot = wwwroot;
 	this.selectors = selectors;
 	this.extService = extService;
+	this.postFinder = postFinder;
 }
 
 /**
@@ -42,7 +43,7 @@ Smartquote.prototype.enable = function( postPageInfo, skipContent, params )
 {
 	// Use passed-in value for speed if possible
 	if ( ! postPageInfo )
-		postPageInfo = PostPageInfo.getPostPageInfo( document, this.selectors );
+		postPageInfo = PostPageInfo.getPostPageInfo( document, this.selectors, this.postFinder );
 
 	// Enable smartquote buttons
 	var posts = postPageInfo.getAllPosts( );
@@ -120,7 +121,7 @@ Smartquote.prototype.getPostMicroQuote = function( content, skipContent, postId 
 	var quote = getTextRangeContent( textRange, skipContent );
 	quote = quote.replace( /(\s|\u00a0)+/g, ' ' );
 	
-	var postInfo = PostPageInfo.getPostPageInfo( document, this.selectors );
+	var postInfo = PostPageInfo.getPostPageInfo( document, this.selectors, this.postFinder );
 	var post = postInfo.getPostByElement( textRange.startContainer );
 	var leadIn = '';
 	if ( post )

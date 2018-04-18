@@ -26,7 +26,7 @@
  */
 
 
-require_once(dirname(__FILE__) . '/../../config.php');
+require_once(__DIR__ . '/../../config.php');
 require_once($CFG->dirroot . '/mod/quiz/locallib.php');
 require_once($CFG->dirroot . '/mod/quiz/report/reportlib.php');
 
@@ -260,4 +260,3 @@ echo $output->review_page($attemptobj, $slots, $page, $showall, $lastpage, $opti
 
 // Trigger an event for this review.
 $attemptobj->fire_attempt_reviewed_event();
-

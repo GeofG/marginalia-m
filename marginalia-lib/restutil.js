@@ -13,17 +13,19 @@ restutil = {
  * to read, and there's really no point to it (at least for URI parameters).  
  * This function uses encodeURIComponent, then converts back some translations 
  * to make everything easier to read and debug.
- */
-encodeURIParameter: function( s )
-{
-	s = encodeURIComponent( s );
+ *
+ * Moodle's minifier gets confused by these comments in the body of the func:
 //	s = s.replace( /%2[fF]/g, '/' );
 //	s = s.replace( /%3[aA]/g, ':' );
-	s = s.replace( /%20/g, '+' );
 //	s = s.replace( /%5[bB]/g, '[' );
 //	s = s.replace( /%5[dD]/g, ']' );
 //	s = s.replace( /%2[cC]/g, ',' );
 //	s = s.replace( /%3[bB]/g, ';' );
+ */
+encodeURIParameter: function( s )
+{
+	s = encodeURIComponent( s );
+	s = s.replace( /%20/g, '+' );
 	return s;
 },
 

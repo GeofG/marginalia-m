@@ -398,7 +398,7 @@ MoodleMarginalia.prototype.init = function( selectors )
 
 MoodleMarginalia.prototype.enablePublishQuotes = function( )
 {
-	this.smartquote = new Smartquote( this.moodleRoot, this.selectors, this.smartquoteService );
+	this.smartquote = new Smartquote( this.moodleRoot, this.selectors, this.smartquoteService, window.marginalia.postFinder );
 	this.smartquote.enable( window.marginalia.listPosts( ), window.marginalia.skipContent );
 }
 

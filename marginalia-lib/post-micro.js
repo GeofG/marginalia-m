@@ -34,7 +34,7 @@
  * Initially that information was integrated into individual DOM nodes (especially
  * as PostMicro objects), but because of memory leak problems I'm moving it here.
  */
-function PostPageInfo( marginalia, doc, selectors, postFinder )
+function PostPageInfo( doc, selectors, postFinder )
 {
 	this.doc = doc;
 	this.posts = new Array( );
@@ -42,6 +42,8 @@ function PostPageInfo( marginalia, doc, selectors, postFinder )
 	this.postsByUrl = new Object( );
 	this.selectors = selectors;
 	this.postFinder = postFinder;
+	if (postFinder == null)
+		console.log("Must specify postFinder");
 	this.IndexPosts( doc.documentElement );
 }
 
@@ -52,7 +54,7 @@ function PostPageInfo( marginalia, doc, selectors, postFinder )
  * as I don't expect more than one to exist - but just in case, it's there.
  */
 PostPageInfo.cachedPostPageInfos = [ ];
-PostPageInfo.getPostPageInfo = function( marginalia, doc, selectors, postFinder )
+PostPageInfo.getPostPageInfo = function( doc, selectors, postFinder )
 {
 	var info;
 	for ( var i = 0;  i < PostPageInfo.cachedPostPageInfos.length; ++i )
@@ -61,7 +63,7 @@ PostPageInfo.getPostPageInfo = function( marginalia, doc, selectors, postFinder 
 		if ( info.doc == doc && info.selectors == selectors)
 			return info;
 	}
-	info = new PostPageInfo( marginalia, doc, selectors, postFinder );
+	info = new PostPageInfo( doc, selectors, postFinder );
 	PostPageInfo.cachedPostPageInfos.push( info );
 	return info;
 }

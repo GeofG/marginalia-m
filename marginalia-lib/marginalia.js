@@ -428,7 +428,7 @@ Marginalia.prototype.listPosts = function( )
 {
 	if ( ! this.posts )
 	{
-		this.posts = PostPageInfo.getPostPageInfo( this, document, this.selectors, this.postFinder );
+		this.posts = PostPageInfo.getPostPageInfo( document, this.selectors, this.postFinder );
 		for ( var i = 0;  i < this.posts.posts.length;  ++i )
 			this.posts.posts[ i ].initMargin( this );
 	}

@@ -170,6 +170,8 @@ class annotation_summary_query
 				return new discussion_annotation_url_handler($page_info->params['discussion']);
 			// Annotations for a single post
 			case '/mod/forum/permalink':
+			// Annotations for writing a reply
+			case '/mod/forum/post':
 				return new post_annotation_url_handler($page_info->params['post']);
 			// Annotations for a particular user in a particular course
 			case '/mod/forum/user':

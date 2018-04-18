@@ -70,7 +70,7 @@ function AnnotationSummary( wwwroot, params )
 		}
 	}
 	
-	this.smartquote = new Smartquote( this.wwwroot, null, this.extService );
+	this.smartquote = new Smartquote( this.wwwroot, null, this.extService, window.marginalia.postFinder );
 }
 
 AnnotationSummary.prototype.deleteAnnotation = function( id, annotationid )
