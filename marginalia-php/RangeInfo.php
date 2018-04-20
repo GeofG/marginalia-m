@@ -32,7 +32,7 @@
 
 class RangeInfo
 {
-	function RangeInfo( $url, $xpathRange, $sequenceRange )
+	function __construct( $url, $xpathRange, $sequenceRange )
 	{
 		$this->url = $url;
 		$this->sequenceRange = $sequenceRange;
@@ -100,5 +100,3 @@ function rangeInfoCompare( $b1, $b2 )
 {
 	return $b1->sequenceRange->compare( $b2->sequenceRange );
 }
-
-?>

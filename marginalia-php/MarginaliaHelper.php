@@ -546,5 +546,3 @@ class MarginaliaHelper
 		return strspn( $field, '0123456789' ) == strlen( $field );
 	}
 }
-
-?>

@@ -1074,7 +1074,7 @@ class moodle_marginalia
 		}
 	}
 	
-	public function moodle_marginalia( )
+	public function __construct( )
 	{
 		global $CFG, $DB;
 		

@@ -31,7 +31,7 @@
  
 class BlockPointIterator
 {
-	function BlockPointIterator( &$blocks )
+	function __construct( &$blocks )
 	{
 		$this->blocks =& $blocks;
 		
@@ -155,5 +155,3 @@ function blockCompareEnd( $a1, $a2 )
 {
 	return $a1->sequenceRange->end->compare( $a2->sequenceRange->end );
 }
-
-?>

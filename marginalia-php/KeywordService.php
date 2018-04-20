@@ -51,7 +51,7 @@ class KeywordService
 	var $niceUrls;		// True or False
 	var $currentUserId;	// ID of the current user, or null if none
 	
-	function KeywordService( $host, $servicePath, $currentUserId, $baseUrl='', $niceUrls=False )
+	function __construct( $host, $servicePath, $currentUserId, $baseUrl='', $niceUrls=False )
 	{
 		$this->host = $host;
 		$this->servicePath = $servicePath;
@@ -267,6 +267,3 @@ class KeywordService
 		}
 	}
 }
-
-
-?>

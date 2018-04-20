@@ -61,7 +61,7 @@ class annotation_summary_query
 	
 	// Call with internal names in $a
 	// If initializing from a URL, call map_params( $_GET ) first
-	function annotation_summary_query( $a )
+	function __construct( $a )
 	{
 		$this->moodlemia = moodle_marginalia::get_instance( );
 		if ( $a )
@@ -531,7 +531,7 @@ class annotation_url_handler
 	public $capannotate = null;
 	public $modinstanceid = null;
 
-	function annotation_url_handler( )
+	function __construct( )
 	{ }
 	
 	// This pulls together the query from the standard portions (which are passed in)
@@ -571,7 +571,7 @@ class annotation_url_handler
 class user_annotation_url_handler extends annotation_url_handler
 {
 	// Can fetch all annotations of posts by a given user
-	function user_annotation_url_handler( $post_authorid=NULL )
+	function __construct( $post_authorid=NULL )
 	{
 		$this->post_authorid = $post_authorid;
 		$this->modulename = 'none';
@@ -640,7 +640,7 @@ class course_annotation_url_handler extends annotation_url_handler
 {
 	// Can fetch all annotations for the course, or just those for posts
 	// by a particular user.
-	function course_annotation_url_handler( $courseid, $post_authorid=NULL )
+	function __construct( $courseid, $post_authorid=NULL )
 	{
 		$this->courseid = $courseid;
 		$this->post_authorid = $post_authorid;
@@ -724,7 +724,7 @@ class forum_annotation_url_handler extends annotation_url_handler
 {
 	var $f;
 	
-	function forum_annotation_url_handler( $f )
+	function __construct( $f )
 	{
 		$this->f = $f;
 		$this->titlehtml = null;
@@ -807,7 +807,7 @@ class discussion_annotation_url_handler extends annotation_url_handler
 	var $d;
 	var $forumid;
 	
-	function discussion_annotation_url_handler( $d )
+	function __construct( $d )
 	{
 		$this->d = $d;
 		$this->capannotate = 'mod/forum:replypost';
@@ -903,7 +903,7 @@ class post_annotation_url_handler extends annotation_url_handler
 {
 	var $p;
 	
-	function post_annotation_url_handler( $p )
+	function __construct( $p )
 	{
 		$this->annotation_url_handler( );
 		$this->p = $p;

@@ -108,7 +108,7 @@ class moodle_annotation_service extends AnnotationService
 		}
 	}
 
-	function moodle_annotation_service( $userid, $extService=null )
+	function __construct( $userid, $extService=null )
 	{
 		global $CFG;
 		
@@ -123,7 +123,7 @@ class moodle_annotation_service extends AnnotationService
 		//$_SESSION['SESSION']->session_test;
 		
 		$moodlemia = moodle_marginalia::get_instance( );
-		AnnotationService::AnnotationService( 
+		AnnotationService::__construct( 
 			$moodlemia->get_host(),
 			$moodlemia->get_service_path(),
 			$moodlemia->get_install_date(),

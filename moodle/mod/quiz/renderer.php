@@ -252,7 +252,7 @@ class mod_quiz_renderer extends plugin_renderer_base {
                 'value' => sesskey()));
         $output .= html_writer::start_tag('div', array('class' => 'submitbtns'));
         $output .= html_writer::empty_tag('input', array('type' => 'submit',
-                'class' => 'questionflagsavebutton', 'name' => 'savingflags',
+                'class' => 'questionflagsavebutton btn btn-secondary', 'name' => 'savingflags',
                 'value' => get_string('saveflags', 'question')));
         $output .= html_writer::end_tag('div');
         $output .= html_writer::end_tag('div');
@@ -275,7 +275,7 @@ class mod_quiz_renderer extends plugin_renderer_base {
             return html_writer::empty_tag('input', array('type' => 'button',
                     'value' => get_string('finishreview', 'quiz'),
                     'id' => 'secureclosebutton',
-                    'class' => 'mod_quiz-next-nav'));
+                    'class' => 'mod_quiz-next-nav btn btn-primary'));
 
         } else {
             return html_writer::link($url, get_string('finishreview', 'quiz'),
@@ -387,7 +387,7 @@ class mod_quiz_renderer extends plugin_renderer_base {
      * @return string HTML fragment.
      */
     protected function render_quiz_nav_question_button(quiz_nav_question_button $button) {
-        $classes = array('qnbutton', $button->stateclass, $button->navmethod);
+        $classes = array('qnbutton', $button->stateclass, $button->navmethod, 'btn', 'btn-secondary');
         $extrainfo = array();
 
         if ($button->currentpage) {
@@ -526,7 +526,8 @@ class mod_quiz_renderer extends plugin_renderer_base {
                     $attemptobj->attempt_url($slot, $page), $this);
         }
 
-        $output .= $this->attempt_navigation_buttons($page, $attemptobj->is_last_page($page));
+        $navmethod = $attemptobj->get_quiz()->navmethod;
+        $output .= $this->attempt_navigation_buttons($page, $attemptobj->is_last_page($page), $navmethod);
 
         // Some hidden fields to trach what is going on.
         $output .= html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'attempt',
@@ -562,15 +563,16 @@ class mod_quiz_renderer extends plugin_renderer_base {
      *
      * @param int $page the page number. Starts at 0 for the first page.
      * @param bool $lastpage is this the last page in the quiz?
+     * @param string $navmethod Optional quiz attribute, 'free' (default) or 'sequential'
      * @return string HTML fragment.
      */
-    protected function attempt_navigation_buttons($page, $lastpage) {
+    protected function attempt_navigation_buttons($page, $lastpage, $navmethod = 'free') {
         $output = '';
 
         $output .= html_writer::start_tag('div', array('class' => 'submitbtns'));
-        if ($page > 0) {
+        if ($page > 0 && $navmethod == 'free') {
             $output .= html_writer::empty_tag('input', array('type' => 'submit', 'name' => 'previous',
-                    'value' => get_string('navigateprevious', 'quiz'), 'class' => 'mod_quiz-prev-nav'));
+                    'value' => get_string('navigateprevious', 'quiz'), 'class' => 'mod_quiz-prev-nav btn btn-secondary'));
         }
         if ($lastpage) {
             $nextlabel = get_string('endtest', 'quiz');
@@ -578,7 +580,7 @@ class mod_quiz_renderer extends plugin_renderer_base {
             $nextlabel = get_string('navigatenext', 'quiz');
         }
         $output .= html_writer::empty_tag('input', array('type' => 'submit', 'name' => 'next',
-                'value' => $nextlabel, 'class' => 'mod_quiz-next-nav'));
+                'value' => $nextlabel, 'class' => 'mod_quiz-next-nav btn btn-primary'));
         $output .= html_writer::end_tag('div');
 
         return $output;
@@ -716,7 +718,8 @@ class mod_quiz_renderer extends plugin_renderer_base {
             // Real question, show it.
             $flag = '';
             if ($attemptobj->is_question_flagged($slot)) {
-                $flag = html_writer::empty_tag('img', array('src' => $this->pix_url('i/flagged'),
+                // Quiz has custom JS manipulating these image tags - so we can't use the pix_icon method here.
+                $flag = html_writer::empty_tag('img', array('src' => $this->image_url('i/flagged'),
                         'alt' => get_string('flagged', 'question'), 'class' => 'questionflag icon-post'));
             }
             if ($attemptobj->can_navigate_to($slot)) {
@@ -873,6 +876,9 @@ class mod_quiz_renderer extends plugin_renderer_base {
 
         $button = new single_button($url, $buttontext);
         $button->class .= ' quizstartbuttondiv';
+        if ($popuprequired) {
+            $button->class .= ' quizsecuremoderequired';
+        }
 
         $popupjsoptions = null;
         if ($popuprequired && $popupoptions) {
@@ -887,7 +893,7 @@ class mod_quiz_renderer extends plugin_renderer_base {
         }
 
         $this->page->requires->js_call_amd('mod_quiz/preflightcheck', 'init',
-                array('.quizstartbuttondiv input[type=submit]', get_string('startattempt', 'quiz'),
+                array('.quizstartbuttondiv [type=submit]', get_string('startattempt', 'quiz'),
                        '#mod_quiz_preflight_form', $popupjsoptions));
 
         return $this->render($button) . $checkform;
@@ -1267,6 +1273,17 @@ class mod_quiz_renderer extends plugin_renderer_base {
         $url = new moodle_url('/mod/quiz/report.php', array(
                 'id' => $cm->id, 'mode' => quiz_report_default_report($context)));
         return html_writer::link($url, $summary);
+    }
+
+    /**
+     * Outputs a chart.
+     *
+     * @param \core\chart_base $chart The chart.
+     * @param string $title The title to display above the graph.
+     * @return string HTML fragment for the graph.
+     */
+    public function chart(\core\chart_base $chart, $title) {
+        return $this->heading($title, 3) . html_writer::tag('div', $this->render($chart), array('class' => 'graph'));
     }
 
     /**

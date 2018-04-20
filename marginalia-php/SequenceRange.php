@@ -34,7 +34,7 @@
  */
 class SequenceRange
 {
-	function SequenceRange( $startPoint=null, $endPoint=null )
+	function __construct( $startPoint=null, $endPoint=null )
 	{
 		$this->start = $startPoint;
 		$this->end = $endPoint;
@@ -125,7 +125,7 @@ class SequencePoint
 	 * - BlockPoint( '2.7.1', 15, 3 )
 	 * - BlockPoint( '2.7.1/15.3' )
 	 */
-	function SequencePoint( $blockStr, $lines=null, $words=null, $chars=null )
+	function __construct( $blockStr, $lines=null, $words=null, $chars=null )
 	{
 		// Create them in case nothing sets them below
 		$this->lines = $lines;
@@ -323,5 +323,3 @@ class SequencePoint
 		$this->chars = null;
 	}
 }
-
-?>

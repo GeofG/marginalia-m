@@ -33,4 +33,4 @@ class MarginaliaKeyword
 	var $name;
 	var $description;
 }
-?>
+

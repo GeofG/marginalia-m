@@ -38,5 +38,3 @@ define( 'PM_URL_REL', 'bookmark' );				// the url of this fragment (uses rel rat
 
 // Annotation format:
 define( 'AN_NOTES_CLASS', 'notes' );			// the notes portion of a fragment
-
-?>

@@ -59,7 +59,7 @@ class AnnotationService
 	var $currentUserId;	// ID (username) of the current user, or null if none
 	var $allowAnyUserPatch;	// Allow any user to submit patch updates
 	
-	function AnnotationService( $host, $servicePath, $installDate, $currentUserId, $args=null )
+	function __construct( $host, $servicePath, $installDate, $currentUserId, $args=null )
 	{
 		$this->host = $host;
 		$this->servicePath = $servicePath;
@@ -537,6 +537,3 @@ class AnnotationService
 		}
 	}	
 }
-
-
-?>

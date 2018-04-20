@@ -30,7 +30,7 @@
 
 class XPathRange
 {
-	function XPathRange( $startPoint=null, $endPoint=null )
+	function __construct( $startPoint=null, $endPoint=null )
 	{
 		$this->start = $startPoint;
 		$this->end = $endPoint;
@@ -236,5 +236,3 @@ class XPathPoint
 		$this->chars = null;
 	}
 }
-
-?>

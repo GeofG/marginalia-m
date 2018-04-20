@@ -32,7 +32,7 @@
 
 class AnnotationUserSummary
 {
-	function AnnotationUserSummary( $annotations, $url )
+	function __construct( $annotations, $url )
 	{
 		$this->url = $url;
 		$this->noteUsers = array();
@@ -68,5 +68,3 @@ class AnnotationUserSummary
 		return $s;
 	}
 }
-
-?>

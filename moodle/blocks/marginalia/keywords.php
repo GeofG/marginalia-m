@@ -41,11 +41,11 @@ require_login();
 
 class moodle_keyword_service extends KeywordService
 {
-	function moodle_keyword_service( $userid )
+	function __construct( $userid )
 	{
 		global $CFG;
 		$moodlemia = moodle_marginalia::get_instance( );
-		KeywordService::KeywordService( 
+		KeywordService::__construct( 
 			$moodlemia->get_host(),
 			$moodlemia->get_keyword_service_path(),
 			$userid,

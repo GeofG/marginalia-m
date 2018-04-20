@@ -40,7 +40,7 @@ require_once( 'XPathRange.php' );
  */
 class Annotation
 {
-	function Annotation( )
+	function __construct( )
 	{
 		$this->id = null;
 		$this->url = null;
@@ -220,5 +220,3 @@ class Annotation
 		return ! $sheet || 'public' == $sheet || 'private' == $sheet;
 	}	
 }
-
-?>
