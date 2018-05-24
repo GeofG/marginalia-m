@@ -278,7 +278,7 @@ abstract class mia_page_profile
 	/**
 	 * Body JS for annotation margin
 	 */
-	public function margin_js( $canAnnotateData )
+	public function margin_js( $canAnnotateData=null )
 	{
 		global $CFG, $USER, $PAGE;
 		
@@ -1069,8 +1069,9 @@ class moodle_marginalia
 			// Course:
 			case '/course/view':
 				return new mia_profile_course( $this, $info, (int) $params[ 'id' ]);
+			// Unknown page. Leave Marginalia switched off.
 			default:
-				throw new Exception("Marginalia is unable to identify page");
+				return null;  // throw new Exception("Marginalia is unable to identify page");
 		}
 	}
 	

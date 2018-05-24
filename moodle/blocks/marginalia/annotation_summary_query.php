@@ -202,6 +202,7 @@ class annotation_summary_query
 		
 		$this->handler->fetch_metadata( );
 		
+		$a = new stdClass( );
 		$a->title = null === $titlehtml ? $this->handler->titlehtml : $titlehtml;
 		$a->who = $this->user ? s( $this->moodlemia->fullname( $this->user ) ) : get_string( 'anyone', ANNOTATION_STRINGS );
 		$a->author = $this->ofuser ? s( $this->moodlemia->fullname( $this->ofuser ) ) : get_string( 'anyone', ANNOTATION_STRINGS );
@@ -232,6 +233,7 @@ class annotation_summary_query
 		
 		$this->handler->fetch_metadata( );
 		
+		$a = new stdClass( );
 		$a->title = null === $titlehtml ? $this->handler->titlehtml : $titlehtml;
 		
 		// Show link to parent search
@@ -905,7 +907,7 @@ class post_annotation_url_handler extends annotation_url_handler
 	
 	function __construct( $p )
 	{
-		$this->annotation_url_handler( );
+		parent::__construct( );
 		$this->p = $p;
 		$this->title = null;
 		$this->capannotate = 'mod/forum:replypost';

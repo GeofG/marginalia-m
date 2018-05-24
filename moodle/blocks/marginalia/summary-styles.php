@@ -117,7 +117,6 @@ table.annotations tbody th {
 
 table.annotations tbody tr th,
 table.annotations tbody tr td {
-	/*border-top: <?PHP echo $THEME->cellcontent; ?> 1px solid ;*/
 	border-top:  white 2px solid;
 }
 

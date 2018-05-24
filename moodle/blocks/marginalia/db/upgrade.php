@@ -42,6 +42,7 @@ function xmldb_block_marginalia_upgrade( $oldversion )
 	global $CFG, $DB;
 	
 	$dbman = $DB->get_manager( );
+	$result = true;
 	
 	if ( $oldversion < 2008121000 )  {
 		

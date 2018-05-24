@@ -2,7 +2,7 @@
 
 class annotation_keywords_db
 {
-	function list_keywords( $userid )
+	static function list_keywords( $userid )
 	{
 		global $CFG, $DB;
 		// A keyword is a note that occurs more than once
@@ -32,5 +32,3 @@ class annotation_keywords_db
 		return $keywords;
 	}
 }
-
-?>

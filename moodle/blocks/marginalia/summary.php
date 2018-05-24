@@ -48,13 +48,13 @@ class annotation_summary_page
 	var $maxrecords = 50;
 	var $logger = null;
 	
-	function annotation_summary_page( $first=1 )
+	function __construct( $first=1 )
 	{
 		$this->moodlemia = moodle_marginalia::get_instance( );
 		$this->first = $first;
 		$this->logger = $this->moodlemia->logger;
-		
 		$this->summary = new annotation_summary_query( annotation_summary_query::map_params( $_GET ) );
+		$this->summary->handler->fetch_metadata( );
 	}
 	
 	function show( )
@@ -149,6 +149,9 @@ class annotation_summary_page
 			if ( $this->course->category )
 				require_login( $this->course->id );
 		}
+
+		// $PAGE->set_cm($cm, $course, $forum);
+		//$PAGE->set_cm(null, $course, $this->summary->handler->modinstance);
 
 		// #geof#: not quite correct - should fetch the URL from the summary object
 		$PAGE->set_url( '/mod/forum/summary.php' );
@@ -497,6 +500,7 @@ class annotation_summary_page
 		echo "<p><a href='help.php?component=block_marginalia&topic=annotation_summary'>"
 			.get_string( 'annotation_summary_help_link', ANNOTATION_STRINGS ).'</a></p>';
 
+		//echo("COURSE : " . $this->courseid);
 		$OUTPUT->footer($this->course);
 
 		$logurl = $_SERVER[ 'REQUEST_URI' ];
