@@ -238,8 +238,43 @@ MoodleMarginalia.prototype.onload = function( )
 				post_authorid: null,
 				post_date: null,
 				mia_notes: new Selector( '.mia_margin', '.content .posting .mia_margin' ),
-				post_url: new Selector( function( root) { return $( root ).prev( 'a' ); }, null,
-					function( node ) { return '/mod/forum/permalink.php?p=' + node.id.substr( 1 ); } )
+				// #geof# 2018-12-06 Moodle 3.7 no longer has an anchor a element before
+				// the post element. Previously, I had taken the ID from that to generate a
+				// permalink. Instead, grab the actual permalink at the post bottom and extract
+				// the post ID from that. So this is out:
+				//post_url: new Selector( function( root) { return $( root ).prev( 'a' ); }, null,
+				//	function( node ) { return '/mod/forum/permalink.php?p=' + node.id.substr( 1 ); } )
+				// And this is in:
+				post_url: new Selector( 
+					( root) => { 
+						// Older versions of Moodle used an <a> right before the post:
+						var x = $( root ).prev( 'a' );
+						if (x.length == 0) {
+							// Newer versions of Moodle use an article tag
+							console.log("try for article");
+							x = $( root ).parent( 'article' );
+						}
+						// In both cases, there's something like id="p21"
+						return x;
+					}, null,
+					( node ) => { return '/mod/forum/permalink.php?p=' + node.id.substr( 1 ); } 
+				)
+				// Alternative solution using Permalink. Tried and tested, but rejected because
+				// it will break if the ordering of Permalink and Show parent is ever changed.
+				/*
+				post_url: new Selector( 
+					( root) => { 
+						var nodes = $( root ).find( "a[rel='bookmark']" ); 
+						console.log("found " + nodes.length);
+						return [nodes[0]];
+					}, 
+					null,
+					( node ) => { 
+						var href = $( node ).attr( 'href' );
+						var x = $( node ).attr( 'href' ).indexOf('#p');
+						return '/mod/forum/permalink.php?p=' + href.substr( 2 + href.indexOf( '#p' ) );
+					} )
+				*/
 			};
 			this.init( selectors );
 			break;
