@@ -374,7 +374,7 @@ class annotation_summary_query
 				$searchcond = '';
 				$addsearchfields = $handler->get_search_fields( );
 				$searchcond = '';
-				$querywords = split( ' ', $this->text );
+				$querywords = explode( ' ', $this->text );
 				$n = 1;
 				foreach ( $querywords as $word )
 				{
